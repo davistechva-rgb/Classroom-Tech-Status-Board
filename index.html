@@ -293,14 +293,14 @@ async function start(){$("#auth").hidden=true;$("#app").hidden=false;
  if(!location.hash)location.hash=(S.me.role==="teacher"&&S.me.rooms.length)?"#/my":"#/";route()}
 function shell(){const m=S.me,cur=location.hash.split("/")[1]||"";const un=unreadCount();
  $("#sch").innerHTML=`${esc(S.board.school||"Room Tech Status")}<small>Classroom tech, room by room</small>`;
- const tabs=[["","Board"],m.rooms.length?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
- $("#tabs").innerHTML=tabs.map(([k,n])=>`<a href="#/${k}" ${cur===k?'aria-current="page"':""}>${n}${k==="tickets"&&un?'<span class="dotn" aria-label="New replies"></span>':""}</a>`).join("");
+ const curT=S.me.role==="teacher"&&!cur?"my":cur;const tabs=[m.role==="teacher"?null:["","Board"],m.rooms.length||m.role==="teacher"?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
+ $("#tabs").innerHTML=tabs.map(([k,n])=>`<a href="#/${k}" ${curT===k?'aria-current="page"':""}>${n}${k==="tickets"&&un?'<span class="dotn" aria-label="New replies"></span>':""}</a>`).join("");
  $("#meBtn").innerHTML=`<span class="av">${esc(initials(m.name))}</span>${esc(m.name.split(" ")[0])}`;
  $("#meWho").innerHTML=`<b>${esc(m.name)}</b>${esc(m.username)} · ${ROLE[m.role]}`;
  document.title=(S.board.school?S.board.school+" · ":"")+"Room Tech Status"}
 function route(){if(!S||!S.board)return;shell();const p=location.hash.replace(/^#\/?/,"").split("/");const v=$("#view");
  const views={"":boardView,my:myView,tickets:ticketsView,t:ticketView,people:peopleView,more:activityView};
- (views[p[0]]||boardView)(v,p.slice(1));window.scrollTo&&p[0]==="t"&&window.scrollTo(0,0)}
+ (S.me.role==="teacher"&&!p[0]?myView:(views[p[0]]||boardView))(v,p.slice(1));window.scrollTo&&p[0]==="t"&&window.scrollTo(0,0)}
 addEventListener("hashchange",route);
 $("#meBtn").onclick=e=>{e.stopPropagation();$("#meMenu").classList.toggle("on")};document.addEventListener("click",()=>$("#meMenu").classList.remove("on"));
 $("#mPw").onclick=()=>auth("change");
@@ -382,7 +382,7 @@ function ticketView(v,[id]){const t=S.board.tickets.find(x=>x.id===id);if(!t){v.
  if($("#seeDev"))$("#seeDev").onclick=()=>deviceDlg(t.room,t.device)}
 /* ===================== DIALOGS ===================== */
 function dlg(html,cls=""){const d=$("#dlg");d.className=cls;d.innerHTML=html;if(!d.open)d.showModal();$$("[data-close]",d).forEach(b=>b.onclick=()=>d.close());return d}
-function reportDlg(rid,did){if(!S.board.rooms.length){toast("No rooms are set up yet.");return}
+function reportDlg(rid,did){if(!S.board.rooms.length){toast(S.me.role==="teacher"?"No room is assigned to your account yet. Ask your admin.":"No rooms are set up yet.");return}
  const def=rid||(S.me.rooms||[])[0]||localStorage.getItem("rsb.lastRoom")||S.board.rooms[0].id;
  const d=dlg(`<form class="dlg" id="fRep" novalidate><h2>Report a problem</h2><p class="hint" style="margin-top:0">Your tech person sees it on the board right away.</p>
   <label class="l" for="rRoom">Room</label><select id="rRoom" name="room">${S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(r=>`<option value="${r.id}">${esc(r.name)}${r.area?` · ${esc(r.area)}`:""}</option>`).join("")}</select>

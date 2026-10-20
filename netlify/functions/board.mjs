@@ -123,8 +123,10 @@ function recompute(b) {
 }
 function boardFor(b, u) {
   const cutoff = Date.now() - 45 * DAY;
-  const tickets = b.tickets.filter(t => t.state !== "fixed" || (t.closed || 0) > cutoff);
-  return { ...b, tickets: tickets.map(t => ({ ...t, unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
+  let tickets = b.tickets.filter(t => t.state !== "fixed" || (t.closed || 0) > cutoff), rooms = b.rooms;
+  // Teachers only see the rooms assigned to them (and tickets they wrote). Admins and techs see everything.
+  if (u && u.role === "teacher") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
+  return { ...b, rooms, tickets: tickets.map(t => ({ ...t, unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
 }
 async function log(by, text) { await mutate("log", () => ({ list: [] }), l => { l.list.unshift({ ts: Date.now(), by, text: clean(text, 300) }); l.list = l.list.slice(0, L.log); }); }
 
@@ -208,7 +210,8 @@ async function handle(req) {
   if (a === "me" || a === "load") {
     const b = upgrade(await read("board", blankBoard));
     const users = await read("users", () => ({ list: [] }));
-    const people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
+    let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
+    if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
     const out = { me: publicUser(me), board: boardFor(b, me), people, types: TYPES };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     if (me.role === "admin") { out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
@@ -275,6 +278,7 @@ async function handle(req) {
       case "report": {
         const r = room(body.room), d = dev(body.room, body.device);
         if (!r || !d) throw new HttpError(400, "That room or device no longer exists. Refresh and try again.");
+        if (me.role === "teacher" && !(me.rooms || []).includes(r.id)) throw new HttpError(403, "You can only report problems in your own room.");
         const text = clean(body.text, L.text); if (!text) throw new HttpError(400, "Describe the problem.");
         if (b.tickets.length >= L.tickets) b.tickets = b.tickets.filter(t => t.state !== "fixed" || t.closed > Date.now() - 90 * DAY);
         const t = { id: id(), room: r.id, device: d.id, text, by: me.username, byName: me.name, severity: body.severity === "down" ? "down" : "issue", state: "open", opened: Date.now(), updated: Date.now(), comments: [], seen: { [me.username]: Date.now() } };
