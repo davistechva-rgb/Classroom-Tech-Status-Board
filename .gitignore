@@ -1,0 +1,12 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+# Editors
+.vscode/
+.idea/
+*.swp
+# Local tooling
+node_modules/
+.netlify/
+*.log

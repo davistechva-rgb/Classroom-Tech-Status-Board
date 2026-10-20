@@ -5,207 +5,498 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Room Tech Status | Davis Tech Support</title>
 <meta name="description" content="See which classroom tech is working, and report a problem in seconds.">
-<meta name="theme-color" content="#1B2A41">
+<meta name="theme-color" content="#14213D">
 <link rel="icon" href="assets/favicon-64.png" type="image/png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
-:root{--bg:#F5F7FA;--card:#fff;--ink:#16202E;--muted:#5F6B7A;--line:#DFE4EA;--nav:#1B2A41;
- --ok:#1E8E5A;--ok-bg:#E4F4EC;--issue:#B7791F;--issue-bg:#FDF2DC;--down:#C53030;--down-bg:#FCE8E8;--repair:#2B6CB0;--repair-bg:#E3EEFA;--r:12px}
+:root{--bg:#F3F5F9;--card:#fff;--ink:#132033;--muted:#5D6B7E;--line:#E1E6EE;--nav:#14213D;--nav2:#1F3157;--accent:#E8453C;--accent-d:#C9362E;--focus:#3E6FD8;
+ --ok:#16A06A;--ok-bg:#E3F6EE;--issue:#D18A0F;--issue-bg:#FFF3DA;--down:#E0433A;--down-bg:#FDE7E6;--repair:#2F6FEB;--repair-bg:#E4EDFF;--r:14px;--sh:0 1px 2px rgba(19,32,51,.05),0 6px 18px rgba(19,32,51,.06)}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
-header{background:var(--nav);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 0 12px}
-.in{max-width:1240px;margin:0 auto;padding:0 20px}
-header .in{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-header img{height:38px}header h1{margin:0;font-size:1.15rem;font-weight:700}header .sub{display:block;font-size:.82rem;color:#AFC0D6;font-weight:500}
-header .sp{flex:1}
-.btn{appearance:none;font:600 .95rem "IBM Plex Sans",sans-serif;padding:10px 15px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;min-height:42px;white-space:nowrap}
-.btn:hover{border-color:#B8C2CE}.btn.p{background:#E53E3E;border-color:#E53E3E;color:#fff}.btn.p:hover{background:#C53030}
-.btn.dk{background:var(--nav);border-color:var(--nav);color:#fff}.btn.sm{padding:6px 10px;min-height:34px;font-size:.86rem}
-header .btn{background:transparent;color:#fff;border-color:#3A4D6B}header .btn.p{background:#E53E3E;border-color:#E53E3E}
-main{padding:20px 0 50px}
-.sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.chip{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-weight:600;cursor:pointer;font:600 .92rem "IBM Plex Sans",sans-serif;color:var(--ink)}
-.chip[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.dot{width:11px;height:11px;border-radius:50%;flex:none;display:inline-block}
-.d-ok{background:var(--ok)}.d-issue{background:var(--issue)}.d-down{background:var(--down)}.d-repair{background:var(--repair)}
-.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-.tools input,.tools select{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;min-height:42px}
-.tools input{flex:1;min-width:200px}
-.lay{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
-@media (max-width:1000px){.lay{grid-template-columns:1fr}}
-.area h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;font-weight:700}.area:first-child h2{margin-top:0}
-.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.room{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 10px;border-top:5px solid var(--ok)}
-.room.st-issue{border-top-color:var(--issue)}.room.st-down{border-top-color:var(--down)}.room.st-repair{border-top-color:var(--repair)}
-.room h3{margin:0 0 8px;font-size:1.05rem;display:flex;justify-content:space-between;gap:8px;align-items:baseline}.room h3 span{font-size:.8rem;color:var(--muted);font-weight:500}
-.dv{display:flex;align-items:center;gap:9px;width:100%;appearance:none;background:none;border:0;border-top:1px solid var(--line);padding:8px 2px;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
-.dv:first-of-type{border-top:0}.dv:hover{background:#F8FAFC}.dv .nm{flex:1;min-width:0}.dv .nm small{display:block;color:var(--muted);font-size:.8rem;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dv .tg{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
-.t-ok{background:var(--ok-bg);color:var(--ok)}.t-issue{background:var(--issue-bg);color:var(--issue)}.t-down{background:var(--down-bg);color:var(--down)}.t-repair{background:var(--repair-bg);color:var(--repair)}
-.room .ad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
-.side{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
-.side h2{margin:0 0 10px;font-size:1.05rem}
-.rp{border-top:1px solid var(--line);padding:12px 0}.rp:first-of-type{border-top:0}
-.rp .w{font-weight:700}.rp .meta{color:var(--muted);font-size:.85rem}.rp p{margin:6px 0}.rp .reply{background:#F5F7FA;border-radius:8px;padding:8px 10px;font-size:.92rem}
-.rp .act{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.empty{color:var(--muted);text-align:center;padding:30px 10px;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
-.note{background:var(--repair-bg);color:#1A4971;border-radius:var(--r);padding:14px 16px;margin-bottom:16px}
-.note.bad{background:var(--down-bg);color:#822727}
-dialog{border:0;border-radius:16px;padding:0;max-width:560px;width:calc(100% - 24px);box-shadow:0 20px 60px rgba(0,0,0,.25)}
-dialog::backdrop{background:rgba(22,32,46,.55)}
-.dlg{padding:22px}.dlg h2{margin:0 0 4px;font-size:1.25rem}
-.dlg label{display:block;font-weight:600;font-size:.92rem;margin:14px 0 6px}
-.dlg input,.dlg select,.dlg textarea{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
-.dlg textarea{min-height:90px;resize:vertical}
-.dlg input:focus,.dlg select:focus,.dlg textarea:focus,.tools input:focus{outline:none;border-color:#4A6FA5;box-shadow:0 0 0 3px rgba(74,111,165,.18)}
-.sev{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sev label{margin:0;display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer;font-weight:600}
-.sev label:has(input:checked){border-color:var(--ink);background:#F5F7FA}.sev input{width:auto;margin-top:4px}
-.sev small{display:block;font-weight:400;color:var(--muted)}
-.foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
-.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}.types label{margin:0;font-weight:500;display:flex;gap:8px;align-items:center}.types input{width:auto}
-.err{color:var(--down);font-size:.92rem;margin-top:8px;min-height:1em}
-.upd{color:var(--muted);font-size:.85rem;margin-left:auto;align-self:center}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--nav);color:#fff;padding:10px 16px;border-radius:9px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:99}.toast.on{opacity:1}
-footer{color:var(--muted);font-size:.88rem;padding:0 0 30px}footer a{color:var(--muted)}
-/* wall display */
-body.wall{background:#0F1726;color:#fff;overflow:hidden}body.wall header,body.wall main,body.wall footer{display:none}
-#wall{display:none}body.wall #wall{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;height:100dvh;padding:3vh 3vw;gap:2.4vh}
-.wh{display:flex;align-items:center;gap:1.4vw}.wh img{height:5vh}.wh b{font-size:3.4vh}.wh .clk{margin-left:auto;font-size:4vh;font-weight:700;font-variant-numeric:tabular-nums}
-.wc{display:grid;grid-template-columns:repeat(4,1fr);gap:1.6vw}.wc div{border-radius:1.6vh;padding:2vh 1.6vw;background:#1A2438}.wc b{display:block;font-size:7vh;line-height:1}.wc span{font-size:2.2vh;color:#AFC0D6}
-.wc .c-ok b{color:#48BB78}.wc .c-issue b{color:#ECC94B}.wc .c-down b{color:#FC8181}.wc .c-repair b{color:#63B3ED}
-.wl{display:grid;grid-template-columns:repeat(auto-fill,minmax(36vh,1fr));gap:1.6vh;align-content:start;overflow:hidden}
-.wi{background:#1A2438;border-radius:1.4vh;padding:1.8vh 1.4vw;border-left:1vh solid #ECC94B}.wi.down{border-left-color:#FC8181}.wi.repair{border-left-color:#63B3ED}
-.wi b{font-size:3vh;display:block;line-height:1.15}.wi span{font-size:2.3vh;color:#C8D3E2}.wi p{margin:.6vh 0 0;font-size:2vh;color:#AFC0D6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.allgood{display:grid;place-items:center;font-size:5vh;color:#48BB78;font-weight:700;text-align:center}
-.wf{color:#7D8CA3;font-size:1.8vh;display:flex;justify-content:space-between}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Inter","IBM Plex Sans",system-ui,sans-serif}
+a{color:var(--focus)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none!important}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:600 .94rem/1 inherit;font-family:inherit;padding:11px 16px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;min-height:42px;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:#BAC4D2}.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(62,111,216,.3);border-color:var(--focus)}
+.btn.red{background:var(--accent);border-color:var(--accent);color:#fff}.btn.red:hover{background:var(--accent-d)}
+.btn.dk{background:var(--nav);border-color:var(--nav);color:#fff}.btn.dk:hover{background:var(--nav2)}
+.btn.sm{padding:7px 11px;min-height:34px;font-size:.86rem}.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.55;cursor:default}
+input,select,textarea{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+textarea{min-height:96px;resize:vertical}
+label.l{display:block;font-weight:600;font-size:.9rem;margin:14px 0 6px}
+.chk{display:flex;gap:9px;align-items:center;font-weight:500;cursor:pointer}.chk input{width:18px;height:18px;margin:0}
+.err{color:var(--down);font-size:.92rem;margin:10px 0 0;min-height:1.2em}
+.hint{color:var(--muted);font-size:.9rem;margin:6px 0 0}
+/* ---------- auth ---------- */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(1000px 600px at 20% -10%,#24406F,transparent 60%),var(--nav)}
+.auth .box{width:100%;max-width:420px;background:#fff;border-radius:18px;padding:28px 28px 24px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+.auth .brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}.auth .brand img{height:52px}
+.auth h1{font-size:1.35rem;margin:0}.auth .brand span{color:var(--muted);font-size:.88rem}
+.auth h2{font-size:1.1rem;margin:4px 0 2px}
+.auth .btn.full{width:100%;margin-top:18px}
+.auth .alt{margin-top:16px;text-align:center;font-size:.9rem;color:var(--muted)}.auth .alt button{background:none;border:0;color:var(--focus);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
+/* ---------- shell ---------- */
+header.top{background:var(--nav);color:#fff;position:sticky;top:0;z-index:30;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.in{max-width:1280px;margin:0 auto;padding:0 20px}
+.top .in{display:flex;align-items:center;gap:14px;min-height:62px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.top img{height:36px}.top .sch{font-weight:700;font-size:1.02rem;line-height:1.15}.top .sch small{display:block;color:#9FB2D0;font-weight:500;font-size:.78rem}
+nav.tabs{display:flex;gap:4px;margin-left:10px;flex-wrap:wrap}
+nav.tabs a{color:#C7D3E8;text-decoration:none;font-weight:600;font-size:.93rem;padding:8px 12px;border-radius:9px;position:relative}
+nav.tabs a:hover{background:var(--nav2);color:#fff}nav.tabs a[aria-current]{background:#fff;color:var(--nav)}
+nav.tabs .dotn{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--nav)}
+.top .sp{flex:1}
+.top .btn{background:transparent;color:#fff;border-color:#33466E}.top .btn.red{background:var(--accent);border-color:var(--accent)}
+.me{position:relative}.me>button{background:var(--nav2);border:0;color:#fff;border-radius:99px;padding:5px 12px 5px 5px;display:flex;align-items:center;gap:8px;font:600 .9rem inherit;font-family:inherit;cursor:pointer}
+.av{width:30px;height:30px;border-radius:50%;background:#3E6FD8;display:grid;place-items:center;font-weight:700;font-size:.8rem;color:#fff;flex:none}
+.menu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;color:var(--ink);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.2);min-width:220px;padding:6px;display:none}
+.menu.on{display:block}.menu .who{padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px;font-size:.88rem;color:var(--muted)}.menu .who b{display:block;color:var(--ink);font-size:.95rem}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:8px;font:500 .93rem inherit;font-family:inherit;cursor:pointer;color:var(--ink)}.menu button:hover{background:var(--bg)}
+main{padding:22px 0 60px}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ph h1{margin:0;font-size:1.5rem;letter-spacing:-.01em}.ph p{margin:4px 0 0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.pad{padding:18px}
+.banner{border-radius:var(--r);padding:14px 16px;margin-bottom:16px;background:var(--repair-bg);color:#1B3E8A}.banner.bad{background:var(--down-bg);color:#8A1F19}
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{appearance:none;text-align:left;font:inherit;color:inherit;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh)}
+.stat .si{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none}.stat .si svg{width:24px;height:24px}
+.stat b{display:block;font-size:1.6rem;line-height:1}.stat span{color:var(--muted);font-size:.86rem}
+.stat[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink),var(--sh)}
+.s-down .si{background:var(--down-bg);color:var(--down)}.s-issue .si{background:var(--issue-bg);color:var(--issue)}.s-repair .si{background:var(--repair-bg);color:var(--repair)}.s-ok .si{background:var(--ok-bg);color:var(--ok)}
+@media (max-width:760px){.stats{grid-template-columns:1fr 1fr}}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center}.tools input[type=search]{flex:1;min-width:200px}.tools select{width:auto;min-width:160px}
+/* ---------- rooms and device tiles ---------- */
+.area-h{font-size:.8rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;margin:22px 0 10px;display:flex;align-items:center;gap:10px}.area-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.room{padding:16px;position:relative;overflow:hidden}
+.room::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--ok)}
+.room.st-issue::before{background:var(--issue)}.room.st-down::before{background:var(--down)}.room.st-repair::before{background:var(--repair)}
+.room.mine{box-shadow:0 0 0 2px var(--focus),var(--sh)}
+.rh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.rh h3{margin:0;font-size:1.08rem}.rh .who{color:var(--muted);font-size:.84rem}
+.rh .tag{font-size:.74rem;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.tile{appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:14px 8px 11px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(180deg,#fff,#F7F9FC);transition:transform .12s,box-shadow .12s}
+.tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(19,32,51,.1)}
+.tile .nm{font-weight:600;font-size:.84rem;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tile .lb{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px}
+.ico{position:relative;width:54px;height:54px;border-radius:15px;display:grid;place-items:center;flex:none}
+.ico svg{width:30px;height:30px}
+.ico.cart .st{position:absolute;display:grid;place-items:center}.ico.cart .st svg{width:24px;height:24px}
+.ico.cart .s1{transform:translate(-7px,4px)}.ico.cart .s2{transform:translate(0,0);opacity:.7}.ico.cart .s3{transform:translate(7px,-4px);opacity:.42}
+.ico.cart .bolt{position:absolute;right:-5px;bottom:-5px;width:22px;height:22px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.2)}.ico.cart .bolt svg{width:14px;height:14px;color:#E2A400}
+.t-ok .ico{background:var(--ok-bg);color:var(--ok)}.t-issue .ico{background:var(--issue-bg);color:var(--issue)}.t-down .ico{background:var(--down-bg);color:var(--down)}.t-repair .ico{background:var(--repair-bg);color:var(--repair)}
+.t-ok .lb{background:var(--ok-bg);color:var(--ok)}.t-issue .lb{background:var(--issue-bg);color:#9A6300}.t-down .lb{background:var(--down-bg);color:var(--down)}.t-repair .lb{background:var(--repair-bg);color:var(--repair)}
+.tile.t-down{border-color:#F4C2BE;background:linear-gradient(180deg,#fff,#FFF5F4)}.tile.t-issue{border-color:#F2DDA9}.tile.t-repair{border-color:#C5D6FB}
+.badge{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:#fff}.badge svg{width:12px;height:12px}
+.t-ok .badge{background:var(--ok)}.t-issue .badge{background:var(--issue)}.t-down .badge{background:var(--down)}.t-repair .badge{background:var(--repair)}
+.t-down .ico::after{content:"";position:absolute;inset:-4px;border-radius:19px;border:2px solid var(--down);animation:ring 1.8s ease-out infinite}
+@keyframes ring{0%{opacity:.7;transform:scale(.92)}100%{opacity:0;transform:scale(1.18)}}
+.radd{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.tile.add{border-style:dashed;color:var(--muted);background:transparent;justify-content:center}.tile.add .ico{background:var(--bg);color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:40px 16px;background:#fff;border:1px dashed var(--line);border-radius:var(--r)}
+/* ---------- tickets ---------- */
+.tl{display:grid;gap:10px}
+.trow{display:flex;gap:14px;align-items:center;padding:14px 16px;text-decoration:none;color:inherit}
+.trow:hover{border-color:#BAC4D2}.trow .ico{width:46px;height:46px;border-radius:13px}.trow .ico svg{width:26px;height:26px}.trow .ico.cart .st svg{width:20px;height:20px}
+.trow .tx{flex:1;min-width:0}.trow .tx b{display:block}.trow .tx p{margin:2px 0 0;color:var(--muted);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .meta{text-align:right;font-size:.82rem;color:var(--muted);white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.p-open{background:var(--down-bg);color:var(--down)}.p-open.sev-issue{background:var(--issue-bg);color:#9A6300}.p-progress{background:var(--repair-bg);color:var(--repair)}.p-waiting{background:#EFE7FF;color:#6B3FD1}.p-fixed{background:var(--ok-bg);color:var(--ok)}
+.unread{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{appearance:none;border:0;background:none;font:600 .9rem inherit;font-family:inherit;padding:8px 14px;border-radius:8px;cursor:pointer;color:var(--muted)}.seg button[aria-pressed=true]{background:var(--nav);color:#fff}
+.tk{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}@media (max-width:900px){.tk{grid-template-columns:1fr}}
+.tkh{display:flex;gap:14px;align-items:center}.tkh .ico{width:62px;height:62px;border-radius:17px}.tkh .ico svg{width:34px;height:34px}
+.tkh h1{margin:0;font-size:1.3rem}.tkh p{margin:2px 0 0;color:var(--muted)}
+.thread{display:grid;gap:12px;margin-top:18px}
+.msg{max-width:85%;padding:11px 14px;border-radius:14px;background:var(--bg);white-space:pre-wrap;word-wrap:break-word}
+.msg.mine{justify-self:end;background:#E7EEFF}.msg.staff{background:#EAF6F0}
+.msg .by{font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:3px;display:flex;gap:8px;justify-content:space-between}
+.msg.sys{justify-self:center;background:none;color:var(--muted);font-size:.86rem;padding:2px 8px;text-align:center}
+.msg.first{background:#fff;border:1px solid var(--line);max-width:100%;justify-self:stretch}
+.compose{display:flex;gap:10px;margin-top:16px;align-items:flex-end}.compose textarea{min-height:52px;height:52px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:0;font-size:.93rem}.kv dt{color:var(--muted)}.kv dd{margin:0;font-weight:500;word-break:break-word}
+.side h3{margin:0 0 10px;font-size:1rem}.side .btns{display:grid;gap:8px;margin-top:10px}
+/* ---------- tables ---------- */
+table.t{width:100%;border-collapse:collapse;font-size:.93rem}table.t th,table.t td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}table.t th{color:var(--muted);font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em}
+.role{font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--bg)}.role.admin{background:#FDE7E6;color:#A12A22}.role.tech{background:var(--repair-bg);color:var(--repair)}
+.off{opacity:.5}
+/* ---------- dialogs ---------- */
+dialog{border:0;border-radius:18px;padding:0;max-width:600px;width:calc(100% - 24px);box-shadow:0 24px 70px rgba(0,0,0,.3);color:var(--ink)}
+dialog.wide{max-width:820px}
+dialog::backdrop{background:rgba(19,32,51,.55)}
+.dlg{padding:22px 22px 20px}.dlg h2{margin:0 0 4px;font-size:1.25rem}
+.foot{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+.sev{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sev label{margin:0;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;font-weight:600}
+.sev label:has(input:checked){border-color:var(--ink);background:var(--bg)}.sev input{width:auto;margin-top:4px}.sev small{display:block;font-weight:400;color:var(--muted)}
+.typegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.typegrid label{margin:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:10px 6px;border:1px solid var(--line);border-radius:12px;font-size:.8rem;font-weight:600}
+.typegrid input{position:absolute;opacity:0;pointer-events:none}.typegrid label:has(input:checked){border-color:var(--focus);background:#EEF3FF;box-shadow:inset 0 0 0 1px var(--focus)}
+.typegrid .ico{width:44px;height:44px;border-radius:12px;background:var(--bg);color:var(--nav)}.typegrid .ico svg{width:26px;height:26px}
+.devhead{display:flex;gap:16px;align-items:center}.devhead .ico{width:72px;height:72px;border-radius:20px}.devhead .ico svg{width:40px;height:40px}.devhead .ico.cart .st svg{width:30px;height:30px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}@media (max-width:560px){.g2{grid-template-columns:1fr}}
+.hist{display:grid;gap:8px;margin-top:8px}.hist a{display:flex;gap:10px;justify-content:space-between;text-decoration:none;color:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:.9rem}.hist a:hover{background:var(--bg)}
+.slips{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slip{border:1px dashed #9AA6B8;border-radius:10px;padding:12px 14px;font-size:.9rem;break-inside:avoid}.slip b{font-size:1rem}.slip code{font:600 1rem ui-monospace,Consolas,monospace;background:var(--bg);padding:2px 6px;border-radius:5px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);background:var(--nav);color:#fff;padding:11px 18px;border-radius:10px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:100}.toast.on{opacity:1;transform:translateX(-50%)}
+footer.ft{color:var(--muted);font-size:.86rem;padding:0 0 30px}
+/* ---------- wall display ---------- */
+.wall{background:#0E1626;color:#fff;min-height:100vh;height:100vh;height:100dvh;overflow:hidden;display:grid;grid-template-rows:auto auto 1fr auto;padding:3vh 3vw;gap:2.6vh}
+.wall .wh{display:flex;align-items:center;gap:1.2vw}.wall .wh img{height:5.4vh}.wall .wh b{font-size:3.4vh}.wall .wh .clk{margin-left:auto;font-size:4.2vh;font-weight:700;font-variant-numeric:tabular-nums}
+.wall .wc{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4vw}.wall .wc div{background:#18233A;border-radius:1.8vh;padding:2.2vh 1.6vw}.wall .wc b{display:block;font-size:7.5vh;line-height:1}.wall .wc span{font-size:2.3vh;color:#A9B8D2}
+.wall .c-down b{color:#FF7B72}.wall .c-issue b{color:#F7C15A}.wall .c-repair b{color:#7FA8FF}.wall .c-ok b{color:#4CD69A}
+.wall .wl{display:grid;grid-template-columns:repeat(auto-fill,minmax(40vh,1fr));gap:1.6vh;align-content:start;overflow:hidden}
+.wall .wi{background:#18233A;border-radius:1.8vh;padding:1.8vh 1.4vw;display:flex;gap:1.2vw;align-items:center;border-left:.9vh solid #F7C15A}.wall .wi.t-down{border-left-color:#FF7B72}.wall .wi.t-repair{border-left-color:#7FA8FF}
+.wall .wi .ico{width:7.4vh;height:7.4vh;border-radius:2vh}.wall .wi .ico svg{width:4.4vh;height:4.4vh}.wall .wi .ico.cart .st svg{width:3.6vh;height:3.6vh}
+.wall .wi b{font-size:2.9vh;display:block;line-height:1.15}.wall .wi span{font-size:2.2vh;color:#C8D3E6}.wall .wi p{margin:.5vh 0 0;font-size:1.9vh;color:#A9B8D2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wall .good{grid-column:1/-1;display:grid;place-items:center;font-size:5vh;font-weight:700;color:#4CD69A}
+.wall .wf{display:flex;justify-content:space-between;color:#7F90AE;font-size:1.9vh}
+@media print{header.top,footer.ft,.noprint{display:none!important}body{background:#fff}main{padding:0}.card{box-shadow:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+main.in{padding-top:26px;padding-bottom:60px}
+.btn svg{width:18px;height:18px;flex:none}.btn.sm svg{width:16px;height:16px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn.dk[disabled]{opacity:1}
+.wall .wi.t-down .ico{background:rgba(224,67,58,.18);color:#FF8A82}.wall .wi.t-issue .ico{background:rgba(209,138,15,.2);color:#FFC759}.wall .wi.t-repair .ico{background:rgba(47,111,235,.22);color:#8FB3FF}
+dialog{overflow-x:hidden}
+
 </style>
 </head>
 <body>
-<header><div class="in"><img src="assets/logo-mark-white.png" alt="Davis Tech Support"><h1><span id="schoolT">Room Tech Status</span><span class="sub">Classroom tech, room by room</span></h1><span class="sp"></span>
- <button class="btn p" id="rep" type="button">Report a problem</button><button class="btn" id="adm" type="button">Admin</button></div></header>
-<main><div class="in">
- <div id="notes"></div>
- <div class="sum" id="sum"></div>
- <div class="tools"><label class="sr" for="q" hidden>Search</label><input type="search" id="q" placeholder="Search rooms or devices" aria-label="Search rooms or devices"><select id="area" aria-label="Area"></select><span class="upd" id="upd"></span></div>
- <div class="lay"><div id="rooms"></div><aside class="side"><h2 id="repH">Open reports</h2><div id="reps"></div></aside></div>
-</div></main>
-<footer><div class="in">Made by <a href="https://davis-tech-support.com" target="_blank" rel="noopener">Davis Tech Support</a> · <a href="?display">Wall display</a></div></footer>
-<div id="wall"><div class="wh"><img src="assets/logo-mark-white.png" alt=""><b id="wSchool">Room Tech Status</b><span class="clk" id="wClk"></span></div><div class="wc" id="wCounts"></div><div class="wl" id="wList"></div><div class="wf"><span id="wUpd"></span><span>Report problems at <b id="wUrl"></b></span></div></div>
-<dialog id="dRep"><form class="dlg" method="dialog" id="fRep"><h2>Report a problem</h2><p class="hint" style="color:var(--muted);margin:0">Your tech person will see it on the board right away.</p>
- <label for="rRoom">Room</label><select id="rRoom" required></select>
- <label for="rDev">What isn't working?</label><select id="rDev" required></select>
- <label>How bad is it?</label><div class="sev"><label><input type="radio" name="sev" value="down" checked><span>Not working at all<small>Can't use it</small></span></label><label><input type="radio" name="sev" value="issue"><span>Has a problem<small>Usable, but something's wrong</small></span></label></div>
- <label for="rText">What's happening?</label><textarea id="rText" maxlength="400" required placeholder="Projector turns on but shows “No signal” from my laptop."></textarea>
- <label for="rBy">Your name</label><input id="rBy" maxlength="60" autocomplete="name">
- <div class="err" id="rErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn p" id="rSend" value="send">Send report</button></div></form></dialog>
-<dialog id="dPin"><form class="dlg" method="dialog" id="fPin"><h2 id="pinH">Admin sign-in</h2><p id="pinP" style="color:var(--muted);margin:0">Enter the admin PIN to manage rooms and reports.</p>
- <label for="pin" id="pinL">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
- <div class="err" id="pErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn dk" value="ok">Sign in</button></div></form></dialog>
-<dialog id="dRoom"><form class="dlg" method="dialog" id="fRoom"><h2 id="roomH">Add a room</h2>
- <label for="roName">Room name or number</label><input id="roName" maxlength="60" required placeholder="Room 112">
- <label for="roArea">Building or hallway (optional)</label><input id="roArea" maxlength="60" placeholder="Upper School" list="areas"><datalist id="areas"></datalist>
- <div id="roTypesW"><label>Devices in this room</label><div class="types" id="roTypes"></div></div>
- <div class="err" id="roErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn dk" value="ok">Save</button></div></form></dialog>
-<dialog id="dDev"><form class="dlg" method="dialog" id="fDev"><h2 id="devH"></h2><p id="devP" style="color:var(--muted);margin:0"></p>
- <div id="devAdmin"><label>Status</label><div class="sev" id="devSt"></div><label for="devNote">Note for staff (optional)</label><input id="devNote" maxlength="400" placeholder="New bulb ordered, back Friday"></div>
- <div class="foot"><button class="btn" value="cancel" formnovalidate>Close</button><button class="btn p" type="button" id="devRep">Report a problem</button><button class="btn dk" value="ok" id="devSave">Save</button></div></form></dialog>
-<div class="toast" id="toast" role="status"></div>
+<div id="auth" class="auth" hidden></div>
+<div id="app" hidden>
+<header class="top"><div class="in">
+ <a href="#/" aria-label="Board home"><img src="assets/logo-mark-white.png" alt="Davis Tech Support"></a>
+ <div id="sch" class="sch"></div>
+ <nav class="tabs" id="tabs" aria-label="Main"></nav>
+ <span class="sp"></span>
+ <button class="btn red sm" type="button" id="repTop">Report a problem</button>
+ <div class="me"><button class="btn sm" type="button" id="meBtn" aria-haspopup="menu"></button>
+  <div class="menu" id="meMenu" role="menu"><div class="who" id="meWho"></div><button type="button" id="mPw" role="menuitem">Change my password</button><button type="button" id="mOut" role="menuitem">Sign out</button></div></div>
+</div></header>
+<main class="in">
+ <div class="banner bad" id="netbad" hidden>Can't reach the board right now. Showing the last update. It will refresh on its own.</div>
+ <div id="view"></div>
+</main>
+<footer class="ft in"><img src="assets/logo-mark.png" alt="" style="height:26px;vertical-align:middle"> Room Tech Status by <a href="https://davis-tech-support.com">Davis Tech Support</a> · <a href="tel:4342944456">434-294-4456</a></footer>
+</div>
+<div id="wall" class="wall" hidden></div>
+<dialog id="dlg"></dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
+/* Device icons from Tabler Icons (MIT license, tabler.io/icons). Carts are drawn as a stack with a charging bolt. */
+const ICON={
+"Projector": "<path d=\"M8 9a5 5 0 1 0 10 0a5 5 0 0 0 -10 0\" /> <path d=\"M9 6h-4a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2 -2v-8a2 2 0 0 0 -2 -2h-2\" /> <path d=\"M6 15h1\" /> <path d=\"M7 18l-1 2\" /> <path d=\"M18 18l1 2\" />",
+"TV or display": "<path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\" /> <path d=\"M16 3l-4 4l-4 -4\" />",
+"Interactive board": "<path d=\"M3 4l18 0\" /> <path d=\"M4 4v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-10\" /> <path d=\"M12 16l0 4\" /> <path d=\"M9 20l6 0\" /> <path d=\"M8 12l3 -3l2 2l3 -3\" />",
+"Document camera": "<path d=\"M15 8h.01\" /> <path d=\"M6 13l2.644 -2.644a1.21 1.21 0 0 1 1.712 0l3.644 3.644\" /> <path d=\"M13 13l1.644 -1.644a1.21 1.21 0 0 1 1.712 0l1.644 1.644\" /> <path d=\"M3 7v-2a2 2 0 0 1 2 -2h2\" /> <path d=\"M3 17v2a2 2 0 0 0 2 2h2\" /> <path d=\"M17 3h2a2 2 0 0 1 2 2v2\" /> <path d=\"M17 21h2a2 2 0 0 0 2 -2v-2\" />",
+"Computer": "<path d=\"M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10\" /> <path d=\"M7 20h10\" /> <path d=\"M9 16v4\" /> <path d=\"M15 16v4\" />",
+"Laptop": "<path d=\"M3 19l18 0\" /> <path d=\"M5 7a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8\" />",
+"Chromebook cart": "<path d=\"M3 19l18 0\" /> <path d=\"M5 7a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8\" />",
+"iPad cart": "<path d=\"M18 3a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2l12 0\" /> <path d=\"M9 18h6\" />",
+"Printer": "<path d=\"M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2\" /> <path d=\"M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4\" /> <path d=\"M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4\" />",
+"Speakers or sound": "<path d=\"M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14\" /> <path d=\"M9 14a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /> <path d=\"M12 7l0 .01\" />",
+"Microphone": "<path d=\"M9 5a3 3 0 0 1 3 -3a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3l0 -5\" /> <path d=\"M5 10a7 7 0 0 0 14 0\" /> <path d=\"M8 21l8 0\" /> <path d=\"M12 17l0 4\" />",
+"Phone": "<path d=\"M20 3h-2a2 2 0 0 0 -2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-14a2 2 0 0 0 -2 -2\" /> <path d=\"M16 4h-11a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h11\" /> <path d=\"M12 8h-6v3h6l0 -3\" /> <path d=\"M12 14v.01\" /> <path d=\"M9 14v.01\" /> <path d=\"M6 14v.01\" /> <path d=\"M12 17v.01\" /> <path d=\"M9 17v.01\" /> <path d=\"M6 17v.01\" />",
+"Wi-Fi access point": "<path d=\"M12 18l.01 0\" /> <path d=\"M9.172 15.172a4 4 0 0 1 5.656 0\" /> <path d=\"M6.343 12.343a8 8 0 0 1 11.314 0\" /> <path d=\"M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0\" />",
+"Camera": "<path d=\"M3 4a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1l0 -2\" /> <path d=\"M8 14a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\" /> <path d=\"M19 7v7a7 7 0 0 1 -14 0v-7\" /> <path d=\"M12 14l.01 0\" />",
+"Other": "<path d=\"M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5\" />"
+};
+const BOLT="<path d=\"M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11\" />";
+const CARTS={"Chromebook cart":1,"iPad cart":1};
+const svgOf=(t,extra="")=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${ICON[t]||ICON.Other}</svg>`;
+function icon(t,cls=""){if(!CARTS[t])return`<span class="ico ${cls}">${svgOf(t)}</span>`;
+ return`<span class="ico cart ${cls}"><span class="st s3">${svgOf(t)}</span><span class="st s2">${svgOf(t)}</span><span class="st s1">${svgOf(t)}</span><span class="bolt"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">${BOLT.replace(/stroke="[^"]*"/g,"")}</svg></span></span>`}
+
+const UI={"down": "<path d=\"M12.802 2.165l5.575 2.389c.48 .206 .863 .589 1.07 1.07l2.388 5.574c.22 .512 .22 1.092 0 1.604l-2.389 5.575c-.206 .48 -.589 .863 -1.07 1.07l-5.574 2.388c-.512 .22 -1.092 .22 -1.604 0l-5.575 -2.389a2.036 2.036 0 0 1 -1.07 -1.07l-2.388 -5.574a2.036 2.036 0 0 1 0 -1.604l2.389 -5.575c.206 -.48 .589 -.863 1.07 -1.07l5.574 -2.388a2.036 2.036 0 0 1 1.604 0\" /> <path d=\"M12 8v4\" /> <path d=\"M12 16h.01\" />", "issue": "<path d=\"M12 9v4\" /> <path d=\"M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0\" /> <path d=\"M12 16h.01\" />", "repair": "<path d=\"M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5\" />", "ok": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /> <path d=\"M9 12l2 2l4 -4\" />", "check": "<path d=\"M5 12l5 5l10 -10\" />", "x": "<path d=\"M18 6l-12 12\" /> <path d=\"M6 6l12 12\" />", "bang": "<path d=\"M12 19v.01\" /> <path d=\"M12 15v-10\" />", "plus": "<path d=\"M12 5l0 14\" /> <path d=\"M5 12l14 0\" />", "send": "<path d=\"M10 14l11 -11\" /> <path d=\"M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5\" />", "chev": "<path d=\"M15 6l-6 6l6 6\" />", "door": "<path d=\"M14 12v.01\" /> <path d=\"M3 21h18\" /> <path d=\"M6 21v-16a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v16\" />", "users": "<path d=\"M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\" /> <path d=\"M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2\" /> <path d=\"M16 3.13a4 4 0 0 1 0 7.75\" /> <path d=\"M21 21v-2a4 4 0 0 0 -3 -3.85\" />", "tv": "<path d=\"M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9\" /> <path d=\"M16 3l-4 4l-4 -4\" />", "list": "<path d=\"M13 5h8\" /> <path d=\"M13 9h5\" /> <path d=\"M13 15h8\" /> <path d=\"M13 19h5\" /> <path d=\"M3 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M3 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" />", "print": "<path d=\"M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2\" /> <path d=\"M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4\" /> <path d=\"M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4\" />", "key": "<path d=\"M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0\" /> <path d=\"M15 9h.01\" />", "logout": "<path d=\"M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2\" /> <path d=\"M9 12h12l-3 -3\" /> <path d=\"M18 15l3 -3\" />", "edit": "<path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\" /> <path d=\"M13.5 6.5l4 4\" />", "trash": "<path d=\"M4 7l16 0\" /> <path d=\"M10 11l0 6\" /> <path d=\"M14 11l0 6\" /> <path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\" /> <path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\" />", "copy": "<path d=\"M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667l0 -8.666\" /> <path d=\"M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1\" />", "search": "<path d=\"M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0\" /> <path d=\"M21 21l-6 -6\" />"};
+const ui=(n,w=2)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${UI[n]}</svg>`;
+
 (function(){
 "use strict";
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2000)};
-const get=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const LBL={ok:"Working",issue:"Has a problem",down:"Not working",repair:"Being fixed"},RANK={down:3,issue:2,repair:1,ok:0};
-const API="api/board";let B=null,TYPES=[],pin=sessionStorage.getItem("rsb.pin")||"",code=get("rsb.code",""),filt=get("rsb.filt",{st:"",area:""}),lastOk=0;
-const WALL=new URLSearchParams(location.search).has("display");if(WALL)document.body.classList.add("wall");
-const ago=t=>{const s=(Date.now()-t)/1000;if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+" min ago";if(s<86400)return Math.floor(s/3600)+" hr ago";return new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"})};
-async function call(method,body){if(location.protocol==="file:")throw{kind:"local"};const h={"content-type":"application/json"};if(code)h["x-staff-code"]=code;if(pin&&method==="GET")h["x-admin-pin"]=pin;
- let r;try{r=await fetch(API,{method,headers:h,body:body?JSON.stringify(body):undefined,cache:"no-store"})}catch(e){throw{kind:"net"}}
- const ct=r.headers.get("content-type")||"";if(!ct.includes("json"))throw{kind:"nofn"};const j=await r.json();if(!r.ok)throw{kind:j.error,msg:j.message||j.error,need:j.needCode};return j}
-function note(html,bad){$("#notes").innerHTML=html?`<div class="note${bad?" bad":""}">${html}</div>`:""}
-async function load(quiet){try{const j=await call("GET");B=j.board;TYPES=j.types;lastOk=Date.now();note("");render()}
- catch(e){if(e.kind==="code"){askCode();return}
-  if(e.kind==="setup")note("<b>Almost ready.</b> Add an <code>ADMIN_PIN</code> environment variable in Netlify (Site configuration > Environment variables), then redeploy. See the README.",true);
-  else if(e.kind==="local"||e.kind==="nofn")note("<b>This board needs its Netlify server function.</b> Deploy this folder to Netlify (see the README). Opening the file from your computer can't save anything.",true);
-  else if(!quiet||Date.now()-lastOk>90000)note(`<b>Can't reach the board right now.</b> ${B?"Showing what was last loaded. ":""}It will keep trying.`,true);
-  if(B)render()}}
-function askCode(){const d=$("#dPin");$("#pinH").textContent="Staff code";$("#pinP").textContent="Enter the staff code your school's tech person gave you. You only need to do this once on this device.";$("#pinL").textContent="Staff code";$("#pin").value="";$("#pin").inputMode="text";$("#pErr").textContent=code?"That code didn't work.":"";d.dataset.mode="code";if(!d.open)d.showModal()}
-function devStatus(r){return r.devices.reduce((w,d)=>RANK[d.status]>RANK[w]?d.status:w,"ok")}
-function render(){if(!B)return;if(WALL)return wall();const admin=!!pin;$("#adm").textContent=admin?"Sign out":"Admin";
- $("#schoolT").textContent=B.school||"Room Tech Status";document.title=(B.school?B.school+" · ":"")+"Room Tech Status";
- const all=B.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const cnt=k=>all.filter(x=>x.d.status===k).length;
- $("#sum").innerHTML=[["","All",all.length],["down","Not working",cnt("down")],["issue","Has a problem",cnt("issue")],["repair","Being fixed",cnt("repair")],["ok","Working",cnt("ok")]].map(([k,n,c])=>`<button type="button" class="chip" data-st="${k}" aria-pressed="${filt.st===k}">${k?`<span class="dot d-${k}"></span>`:""}${n} <b>${c}</b></button>`).join("");
- $$("#sum .chip").forEach(b=>b.onclick=()=>{filt.st=b.dataset.st;set("rsb.filt",filt);render()});
- const areas=[...new Set(B.rooms.map(r=>r.area||""))];$("#area").innerHTML=`<option value="">All areas</option>`+areas.filter(Boolean).map(a=>`<option>${esc(a)}</option>`).join("");$("#area").value=filt.area;$("#area").hidden=areas.filter(Boolean).length<1;
- $("#areas").innerHTML=areas.filter(Boolean).map(a=>`<option value="${esc(a)}">`).join("");
- const q=$("#q").value.trim().toLowerCase();
- const show=B.rooms.filter(r=>(!filt.area||r.area===filt.area)).map(r=>({r,devs:r.devices.filter(d=>(!filt.st||d.status===filt.st)&&(!q||(r.name+" "+(r.area||"")+" "+d.type+" "+(d.name||"")).toLowerCase().includes(q)))})).filter(x=>x.devs.length||(admin&&!filt.st&&(!q||x.r.name.toLowerCase().includes(q))));
- const groups={};show.forEach(x=>(groups[x.r.area||""]=groups[x.r.area||""]||[]).push(x));
- $("#rooms").innerHTML=(admin?`<div class="tools"><button class="btn dk" id="addRoom" type="button">Add a room</button><button class="btn" id="setSchool" type="button">Set school name</button></div>`:"")+
-  (B.rooms.length?(show.length?Object.entries(groups).map(([a,list])=>`<section class="area">${a||Object.keys(groups).length>1?`<h2>${esc(a||"Other rooms")}</h2>`:""}<div class="rooms">${list.map(({r,devs})=>`<article class="room st-${devStatus(r)}"><h3>${esc(r.name)}<span>${r.devices.length} device${r.devices.length===1?"":"s"}</span></h3>
-   ${devs.map(d=>`<button class="dv" type="button" data-r="${r.id}" data-d="${d.id}"><span class="dot d-${d.status}"></span><span class="nm">${esc(d.name||d.type)}${d.name?`<small>${esc(d.type)}</small>`:d.note?`<small>${esc(d.note)}</small>`:""}</span><span class="tg t-${d.status}">${LBL[d.status]}</span></button>`).join("")||`<p style="color:var(--muted);margin:4px 0">No devices yet.</p>`}
-   ${admin?`<div class="ad"><button class="btn sm" type="button" data-adddev="${r.id}">Add device</button><button class="btn sm" type="button" data-edit="${r.id}">Edit</button><button class="btn sm" type="button" data-del="${r.id}">Delete</button></div>`:""}</article>`).join("")}</div></section>`).join(""):`<div class="empty">Nothing matches.</div>`)
-  :`<div class="empty">${admin?"No rooms yet. Press <b>Add a room</b> to start.":"No rooms have been set up yet. Your tech person can add them by signing in as Admin."}</div>`);
- $$(".dv").forEach(b=>b.onclick=()=>devDlg(b.dataset.r,b.dataset.d));
- if(admin){$("#addRoom").onclick=()=>roomDlg();$("#setSchool").onclick=async()=>{const n=prompt("School name shown at the top:",B.school||"");if(n!=null)await act({action:"school",school:n})};
-  $$("[data-adddev]").forEach(b=>b.onclick=async()=>{const t=prompt("Device type: "+TYPES.join(", "),"Projector");if(!t)return;const type=TYPES.find(x=>x.toLowerCase()===t.trim().toLowerCase())||"Other";const n=prompt("Name or label (optional), like “Epson projector” or “Teacher laptop”:","")||"";await act({action:"addDevice",room:b.dataset.adddev,type,name:type==="Other"&&!n?t:n})});
-  $$("[data-edit]").forEach(b=>b.onclick=()=>roomDlg(B.rooms.find(r=>r.id===b.dataset.edit)));
-  $$("[data-del]").forEach(b=>b.onclick=async()=>{const r=B.rooms.find(x=>x.id===b.dataset.del);if(confirm(`Delete ${r.name} and its reports?`))await act({action:"delRoom",room:r.id})})}
- reports();$("#upd").textContent=lastOk?`Updated ${new Date(lastOk).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}`:""}
-function where(rp){const r=B.rooms.find(x=>x.id===rp.room),d=r&&r.devices.find(x=>x.id===rp.device);return{r,d,label:r?`${r.name} · ${d?(d.name||d.type):"device removed"}`:"Room removed"}}
-function reports(){const admin=!!pin;const open=B.reports.filter(r=>r.state!=="fixed"),done=B.reports.filter(r=>r.state==="fixed").slice(0,8);
- $("#repH").textContent=`Open reports (${open.length})`;
- const one=rp=>{const w=where(rp);return`<div class="rp"><div class="w"><span class="dot d-${rp.state==="progress"?"repair":rp.state==="fixed"?"ok":rp.severity}"></span> ${esc(w.label)}</div><div class="meta">${rp.state==="progress"?"Being fixed · ":rp.state==="fixed"?"Fixed · ":rp.severity==="down"?"Not working · ":"Has a problem · "}${esc(rp.by||"Someone")}, ${ago(rp.opened)}</div><p>${esc(rp.text)}</p>${rp.reply?`<div class="reply"><b>Tech reply:</b> ${esc(rp.reply)}</div>`:""}
-  ${admin?`<div class="act">${rp.state!=="progress"&&rp.state!=="fixed"?`<button class="btn sm" data-rs="${rp.id}" data-s="progress">Working on it</button>`:""}${rp.state!=="fixed"?`<button class="btn sm dk" data-rs="${rp.id}" data-s="fixed">Mark fixed</button>`:`<button class="btn sm" data-rs="${rp.id}" data-s="open">Reopen</button>`}<button class="btn sm" data-reply="${rp.id}">Reply</button></div>`:""}</div>`};
- $("#reps").innerHTML=(open.length?open.map(one).join(""):`<p style="color:var(--muted)">No open reports. Everything reported has been handled.</p>`)+(done.length?`<h2 style="margin-top:18px">Recently fixed</h2>`+done.map(one).join(""):"");
- $$("[data-rs]").forEach(b=>b.onclick=()=>act({action:"report-state",report:b.dataset.rs,state:b.dataset.s}));
- $$("[data-reply]").forEach(b=>b.onclick=async()=>{const rp=B.reports.find(x=>x.id===b.dataset.reply);const t=prompt("Reply that staff will see:",rp.reply||"");if(t!=null)await act({action:"report-state",report:rp.id,state:rp.state,reply:t})})}
-async function act(body){try{const j=await call("POST",{...body,pin});B=j.board;lastOk=Date.now();render();return j}catch(e){if(e.kind==="pin"){pin="";sessionStorage.removeItem("rsb.pin");render();toast("Signed out. Sign in again.")}else if(e.kind==="code")askCode();else toast(e.msg||"Couldn't save. Check your connection.");throw e}}
-/* dialogs */
-function fillRooms(sel,roomId){sel.innerHTML=B.rooms.map(r=>`<option value="${r.id}">${esc(r.area?r.area+" · ":"")}${esc(r.name)}</option>`).join("");if(roomId)sel.value=roomId}
-function fillDevs(roomId,devId){const r=B.rooms.find(x=>x.id===roomId);$("#rDev").innerHTML=(r?r.devices:[]).map(d=>`<option value="${d.id}">${esc(d.name||d.type)}${d.status!=="ok"?" ("+LBL[d.status].toLowerCase()+")":""}</option>`).join("");if(devId)$("#rDev").value=devId}
-function repDlg(roomId,devId){if(!B||!B.rooms.length){toast("No rooms are set up yet.");return}fillRooms($("#rRoom"),roomId||get("rsb.lastRoom",""));if(!$("#rRoom").value)$("#rRoom").selectedIndex=0;fillDevs($("#rRoom").value,devId);
- $("#rText").value="";$("#rBy").value=get("rsb.name","");$("#rErr").textContent="";$("#dRep").showModal();setTimeout(()=>(devId?$("#rText"):$("#rDev")).focus(),50)}
-$("#rRoom").onchange=()=>fillDevs($("#rRoom").value);
-$("#fRep").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="send")return;e.preventDefault();const text=$("#rText").value.trim();if(!text){$("#rErr").textContent="Describe what's happening.";return}
- $("#rSend").disabled=true;try{await call("POST",{action:"report",room:$("#rRoom").value,device:$("#rDev").value,severity:document.querySelector('[name=sev]:checked').value,text,by:$("#rBy").value.trim(),pin});
-  set("rsb.name",$("#rBy").value.trim());set("rsb.lastRoom",$("#rRoom").value);$("#dRep").close();toast("Report sent. Thanks!");load()}
- catch(err){if(err.kind==="code"){$("#dRep").close();askCode()}else $("#rErr").textContent=err.msg||"Couldn't send. Check your connection and try again."}$("#rSend").disabled=false});
-function roomDlg(r){$("#roomH").textContent=r?"Edit room":"Add a room";$("#roName").value=r?r.name:"";$("#roArea").value=r?r.area||"":filt.area||"";$("#roTypesW").hidden=!!r;
- $("#roTypes").innerHTML=TYPES.map(t=>`<label><input type="checkbox" value="${esc(t)}" ${["Projector","Computer"].includes(t)?"checked":""}> ${esc(t)}</label>`).join("");$("#roErr").textContent="";$("#dRoom").dataset.id=r?r.id:"";$("#dRoom").showModal()}
-$("#fRoom").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="ok")return;e.preventDefault();const id=$("#dRoom").dataset.id,name=$("#roName").value.trim();if(!name){$("#roErr").textContent="Name the room.";return}
- try{if(id)await act({action:"editRoom",room:id,name,area:$("#roArea").value.trim()});else await act({action:"addRoom",name,area:$("#roArea").value.trim(),devices:$$("#roTypes input:checked").map(i=>i.value)});$("#dRoom").close()}catch(err){$("#roErr").textContent=err.msg||"Couldn't save."}});
-function devDlg(rid,did){const r=B.rooms.find(x=>x.id===rid),d=r&&r.devices.find(x=>x.id===did);if(!d)return;const admin=!!pin;
- $("#devH").textContent=`${r.name} · ${d.name||d.type}`;
- const open=B.reports.filter(x=>x.room===rid&&x.device===did&&x.state!=="fixed");
- $("#devP").innerHTML=`<span class="tg t-${d.status}" style="font-weight:700;padding:2px 8px;border-radius:99px;font-size:.8rem">${LBL[d.status]}</span>${d.note?` ${esc(d.note)}`:""}${open.length?`<br>${open.length} open report${open.length>1?"s":""}: ${esc(open[0].text)}`:""}`;
- $("#devAdmin").hidden=!admin;$("#devSave").hidden=!admin;
- if(admin){$("#devSt").innerHTML=Object.entries(LBL).map(([k,n])=>`<label><input type="radio" name="dst" value="${k}" ${d.status===k?"checked":""}><span><span class="dot d-${k}"></span> ${n}</span></label>`).join("")+`<label><input type="radio" name="dst" value="__del"><span>Remove this device</span></label>`;$("#devNote").value=d.note||""}
- $("#devRep").onclick=()=>{$("#dDev").close();repDlg(rid,did)};$("#dDev").dataset.r=rid;$("#dDev").dataset.d=did;$("#dDev").showModal()}
-$("#fDev").addEventListener("submit",async e=>{if(!e.submitter||e.submitter.value!=="ok")return;e.preventDefault();const rid=$("#dDev").dataset.r,did=$("#dDev").dataset.d,v=document.querySelector("[name=dst]:checked")?.value;
- try{if(v==="__del"){if(!confirm("Remove this device and its reports?"))return;await act({action:"delDevice",room:rid,device:did})}else await act({action:"setStatus",room:rid,device:did,status:v,note:$("#devNote").value});$("#dDev").close()}catch(err){}});
-$("#fPin").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="ok")return;e.preventDefault();const v=$("#pin").value.trim();if(!v)return;
- if($("#dPin").dataset.mode==="code"){code=v;set("rsb.code",code);$("#dPin").close();load();return}
- try{await call("POST",{action:"login",pin:v});pin=v;sessionStorage.setItem("rsb.pin",pin);$("#dPin").close();toast("Signed in as admin");render()}catch(err){$("#pErr").textContent=err.msg||"Couldn't sign in."}});
-$("#adm").onclick=()=>{if(pin){pin="";sessionStorage.removeItem("rsb.pin");render();toast("Signed out");return}const d=$("#dPin");d.dataset.mode="pin";$("#pinH").textContent="Admin sign-in";$("#pinP").textContent="Enter the admin PIN to manage rooms and reports.";$("#pinL").textContent="PIN";$("#pin").value="";$("#pin").inputMode="numeric";$("#pErr").textContent="";d.showModal()};
-$("#rep").onclick=()=>repDlg();$("#q").addEventListener("input",render);$("#area").onchange=e=>{filt.area=e.target.value;set("rsb.filt",filt);render()};
-/* wall display */
-function wall(){$("#wSchool").textContent=B.school||"Room Tech Status";$("#wUrl").textContent=location.host+location.pathname.replace(/index\.html$/,"");
- const all=B.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;
- $("#wCounts").innerHTML=[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<div class="c-${k}"><b>${c(k)}</b><span>${n}</span></div>`).join("");
- const bad=all.filter(x=>x.d.status!=="ok").sort((a,b)=>RANK[b.d.status]-RANK[a.d.status]);
- $("#wList").innerHTML=bad.length?bad.map(({r,d})=>{const rp=B.reports.find(x=>x.room===r.id&&x.device===d.id&&x.state!=="fixed");return`<div class="wi ${d.status}"><b>${esc(r.name)}</b><span>${esc(d.name||d.type)} · ${LBL[d.status]}</span>${rp||d.note?`<p>${esc(d.note||rp.text)}</p>`:""}</div>`}).join(""):`<div class="allgood" style="grid-column:1/-1">✓ All classroom tech is working</div>`;
- $("#wUpd").textContent=lastOk?`Updated ${new Date(lastOk).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}`:""}
-if(WALL)setInterval(()=>{$("#wClk").textContent=new Date().toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})},1000);
-load();setInterval(()=>{if(!document.hidden&&!document.querySelector("dialog[open]"))load(true)},20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load(true)});
+const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2200)};
+const API="api/board";
+const DS={ok:"Working",issue:"Has a problem",down:"Not working",repair:"Being fixed"},RANK={down:3,issue:2,repair:1,ok:0};
+const TS={open:"Open",progress:"Working on it",waiting:"Waiting on parts",fixed:"Fixed"};
+const ROLE={admin:"Admin",tech:"Tech",teacher:"Teacher"};
+const BADGE={ok:"check",issue:"bang",down:"x",repair:"repair"};
+let tok=localStorage.getItem("rsb.tok")||sessionStorage.getItem("rsb.tok")||"",remember=!!localStorage.getItem("rsb.tok");
+let S=null,filt={st:"",area:"",q:""},lastOk=0,busy=false;
+const ago=t=>{if(!t)return"";const s=(Date.now()-t)/1000;if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+" min ago";if(s<86400)return Math.floor(s/3600)+" hr ago";if(s<7*86400)return Math.floor(s/86400)+" days ago";return new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})};
+const when=t=>new Date(t).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const initials=n=>String(n||"?").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join("")||"?";
+function saveTok(t){tok=t||"";localStorage.removeItem("rsb.tok");sessionStorage.removeItem("rsb.tok");if(t)(remember?localStorage:sessionStorage).setItem("rsb.tok",t)}
+async function api(action,data={}){const h={"content-type":"application/json"};if(tok)h.authorization="Bearer "+tok;
+ let r;try{r=await fetch(API,{method:"POST",headers:h,body:JSON.stringify({action,...data}),cache:"no-store"})}catch(e){throw{msg:"Can't reach the board. Check your connection.",net:true}}
+ const ct=r.headers.get("content-type")||"";if(!ct.includes("json"))throw{msg:"This board needs its Netlify server function. Deploy it to Netlify (see the README).",nofn:true};
+ const j=await r.json();if(!r.ok){if(j.signin&&tok&&action!=="login"){saveTok("");S=null;auth("login");}if(j.mustChange&&action!=="me"){S=S||{};S.me=Object.assign(S.me||{},{mustChange:true});auth("change")}throw{msg:j.error||"Something went wrong.",...j}}return j}
+/* ===================== AUTH ===================== */
+function authShell(inner){$("#app").hidden=true;$("#wall").hidden=true;const a=$("#auth");a.hidden=false;
+ a.innerHTML=`<div class="box"><div class="brand"><img src="assets/logo-mark.png" alt="Davis Tech Support"><div><h1>Room Tech Status</h1><span>Classroom tech, room by room</span></div></div>${inner}</div>`}
+function bindForm(f,fn){f.addEventListener("submit",async e=>{e.preventDefault();const b=$("button[type=submit]",f),er=$(".err",f);if(b)b.disabled=true;if(er)er.textContent="";try{await fn(new FormData(f))}catch(x){if(er)er.textContent=x.msg||String(x)}if(b)b.disabled=false})}
+async function auth(mode){
+ if(mode==="login"){authShell(`<form id="fLogin" novalidate><h2>Sign in</h2><label class="l" for="lu">Username</label><input id="lu" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+  <label class="l" for="lp">Password</label><input id="lp" name="p" type="password" autocomplete="current-password" required>
+  <label class="chk" style="margin-top:14px"><input type="checkbox" name="r" ${remember?"checked":""}> Keep me signed in on this device</label>
+  <p class="err" role="alert"></p><button class="btn dk full" type="submit">Sign in</button>
+  <p class="alt">Forgot your password? Ask your tech person to reset it.<br><button type="button" id="toRecover">Admin recovery</button></p></form>`);
+  bindForm($("#fLogin"),async fd=>{remember=!!fd.get("r");const j=await api("login",{username:fd.get("u"),password:fd.get("p"),remember});saveTok(j.token);if(j.user.mustChange){S={me:j.user};auth("change")}else start()});
+  $("#toRecover").onclick=()=>auth("recover");return}
+ if(mode==="setup"){authShell(`<form id="fSetup" novalidate><h2>Welcome! Let's set up your board.</h2><p class="hint">Create your admin account. You'll need the <b>ADMIN_PIN</b> you added in Netlify.</p>
+  <label class="l" for="sp">Setup PIN (your ADMIN_PIN)</label><input id="sp" name="pin" type="password" required autofocus>
+  <label class="l" for="sn">Your name</label><input id="sn" name="name" autocomplete="name" required>
+  <label class="l" for="su">Username</label><input id="su" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="mdavis">
+  <label class="l" for="sw">Password</label><input id="sw" name="p" type="password" autocomplete="new-password" required minlength="8"><p class="hint">At least 8 characters.</p>
+  <label class="l" for="sw2">Type the password again</label><input id="sw2" name="p2" type="password" autocomplete="new-password" required>
+  <p class="err" role="alert"></p><button class="btn dk full" type="submit">Create my admin account</button></form>`);
+  bindForm($("#fSetup"),async fd=>{if(fd.get("p")!==fd.get("p2"))throw{msg:"The two passwords don't match."};await api("setup",{pin:fd.get("pin"),name:fd.get("name"),username:fd.get("u"),password:fd.get("p")});
+   const j=await api("login",{username:fd.get("u"),password:fd.get("p"),remember:true});remember=true;saveTok(j.token);toast("You're all set. Add your rooms next.");start()});return}
+ if(mode==="recover"){authShell(`<form id="fRec" novalidate><h2>Admin recovery</h2><p class="hint">Use the ADMIN_PIN from Netlify to set a new password for an admin account. If the username doesn't exist yet, it's created as an admin.</p>
+  <label class="l" for="rp">Setup PIN (your ADMIN_PIN)</label><input id="rp" name="pin" type="password" required autofocus>
+  <label class="l" for="ru">Admin username</label><input id="ru" name="u" autocapitalize="none" spellcheck="false" required>
+  <label class="l" for="rw">New password</label><input id="rw" name="p" type="password" autocomplete="new-password" required>
+  <p class="err" role="alert"></p><button class="btn dk full" type="submit">Set new password</button><p class="alt"><button type="button" id="toLogin">Back to sign in</button></p></form>`);
+  bindForm($("#fRec"),async fd=>{await api("recover",{pin:fd.get("pin"),username:fd.get("u"),password:fd.get("p")});toast("Password set. Sign in now.");auth("login");$("#lu").value=fd.get("u")});
+  $("#toLogin").onclick=()=>auth("login");return}
+ if(mode==="change"){const forced=S&&S.me&&S.me.mustChange;
+  authShell(`<form id="fPw" novalidate><h2>${forced?"Choose your own password":"Change your password"}</h2><p class="hint">${forced?"You signed in with a temporary password. Pick a new one that only you know.":"Pick a new password with at least 8 characters."}</p>
+  <label class="l" for="pc">${forced?"Temporary password":"Current password"}</label><input id="pc" name="c" type="password" autocomplete="current-password" required autofocus>
+  <label class="l" for="pn">New password</label><input id="pn" name="n" type="password" autocomplete="new-password" required><p class="hint">At least 8 characters. A short sentence works well, like “room112 projector rocks”.</p>
+  <label class="l" for="pn2">Type it again</label><input id="pn2" name="n2" type="password" autocomplete="new-password" required>
+  <p class="err" role="alert"></p><button class="btn dk full" type="submit">Save my password</button>${forced?"":`<p class="alt"><button type="button" id="pwBack">Cancel</button></p>`}</form>`);
+  bindForm($("#fPw"),async fd=>{if(fd.get("n")!==fd.get("n2"))throw{msg:"The two new passwords don't match."};const j=await api("changePassword",{current:fd.get("c"),next:fd.get("n"),remember});saveTok(j.token);toast("Password saved");start()});
+  if(!forced)$("#pwBack").onclick=()=>start();return}}
+/* ===================== DATA ===================== */
+async function load(quiet){try{const j=await api("load");S=j;lastOk=Date.now();$("#netbad").hidden=true;return true}
+ catch(e){if(e.signin||e.mustChange)return false;if(!quiet)throw e;$("#netbad").hidden=Date.now()-lastOk<60000;return false}}
+async function act(action,data,okMsg){try{const j=await api(action,data);if(j.board)S.board=j.board;if(okMsg)toast(okMsg);await load(true);route();return j}catch(e){toast(e.msg||"Couldn't save.");throw e}}
+const isManager=()=>S&&S.me&&(S.me.role==="admin"||S.me.role==="tech");
+const isAdmin=()=>S&&S.me&&S.me.role==="admin";
+const room=id=>S.board.rooms.find(r=>r.id===id);
+const devOf=(rid,did)=>(room(rid)?.devices||[]).find(d=>d.id===did);
+const nameOf=u=>(S.people.find(p=>p.username===u)||{}).name||u;
+const teachersOf=rid=>S.people.filter(p=>(p.rooms||[]).includes(rid));
+const roomStatus=r=>r.devices.reduce((w,d)=>RANK[d.status]>RANK[w]?d.status:w,"ok");
+const dName=d=>d.name||d.type;
+const openT=(rid,did)=>S.board.tickets.filter(t=>t.state!=="fixed"&&(!rid||t.room===rid)&&(!did||t.device===did));
+const unreadCount=()=>S.board.tickets.filter(t=>t.unread&&(t.by===S.me.username||isManager())).length;
+/* ===================== SHELL ===================== */
+async function start(){$("#auth").hidden=true;$("#app").hidden=false;
+ try{const ok=await load();if(!ok)return}catch(e){$("#view").innerHTML=`<div class="banner bad">${esc(e.msg)}</div>`;return}
+ if(!location.hash)location.hash=(S.me.role==="teacher"&&S.me.rooms.length)?"#/my":"#/";route()}
+function shell(){const m=S.me,cur=location.hash.split("/")[1]||"";const un=unreadCount();
+ $("#sch").innerHTML=`${esc(S.board.school||"Room Tech Status")}<small>Classroom tech, room by room</small>`;
+ const tabs=[["","Board"],m.rooms.length?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
+ $("#tabs").innerHTML=tabs.map(([k,n])=>`<a href="#/${k}" ${cur===k?'aria-current="page"':""}>${n}${k==="tickets"&&un?'<span class="dotn" aria-label="New replies"></span>':""}</a>`).join("");
+ $("#meBtn").innerHTML=`<span class="av">${esc(initials(m.name))}</span>${esc(m.name.split(" ")[0])}`;
+ $("#meWho").innerHTML=`<b>${esc(m.name)}</b>${esc(m.username)} · ${ROLE[m.role]}`;
+ document.title=(S.board.school?S.board.school+" · ":"")+"Room Tech Status"}
+function route(){if(!S||!S.board)return;shell();const p=location.hash.replace(/^#\/?/,"").split("/");const v=$("#view");
+ const views={"":boardView,my:myView,tickets:ticketsView,t:ticketView,people:peopleView,more:activityView};
+ (views[p[0]]||boardView)(v,p.slice(1));window.scrollTo&&p[0]==="t"&&window.scrollTo(0,0)}
+addEventListener("hashchange",route);
+$("#meBtn").onclick=e=>{e.stopPropagation();$("#meMenu").classList.toggle("on")};document.addEventListener("click",()=>$("#meMenu").classList.remove("on"));
+$("#mPw").onclick=()=>auth("change");
+$("#mOut").onclick=()=>{saveTok("");S=null;location.hash="";auth("login");toast("Signed out")};
+$("#repTop").onclick=()=>reportDlg();
+/* ===================== TILES ===================== */
+function tile(r,d){const t=openT(r.id,d.id);return`<button class="tile t-${d.status}" type="button" data-r="${r.id}" data-d="${d.id}" title="${esc(dName(d))}: ${DS[d.status]}">
+ <span class="badge">${ui(BADGE[d.status],3)}</span>${icon(d.type)}<span class="nm">${esc(dName(d))}</span><span class="lb">${DS[d.status]}${t.length>1?` · ${t.length}`:""}</span></button>`}
+function roomCard(r,devs,showAdd){const tchs=teachersOf(r.id);const mine=(S.me.rooms||[]).includes(r.id);const st=roomStatus(r);const n=openT(r.id).length;
+ return`<article class="card room st-${st}${mine?" mine":""}"><div class="rh"><div><h3>${esc(r.name)}</h3><div class="who">${tchs.length?esc(tchs.map(t=>t.name).join(", ")):r.area?esc(r.area):"&nbsp;"}</div></div>
+  <span class="tag">${mine?"Your room · ":""}${n?`${n} open`:"All working"}</span></div>
+  <div class="tiles">${devs.map(d=>tile(r,d)).join("")}${showAdd&&isManager()?`<button class="tile add" type="button" data-adddev="${r.id}"><span class="ico">${ui("plus")}</span><span class="nm">Add device</span></button>`:""}</div>
+  ${isManager()&&showAdd?`<div class="radd"><button class="btn sm" type="button" data-editroom="${r.id}">${ui("edit")} Edit room</button></div>`:""}</article>`}
+function wireTiles(root){$$(".tile[data-d]",root).forEach(b=>b.onclick=()=>deviceDlg(b.dataset.r,b.dataset.d));
+ $$("[data-adddev]",root).forEach(b=>b.onclick=()=>deviceForm(b.dataset.adddev));$$("[data-editroom]",root).forEach(b=>b.onclick=()=>roomForm(room(b.dataset.editroom)))}
+/* ===================== BOARD ===================== */
+function boardView(v){const all=S.board.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;
+ const areas=[...new Set(S.board.rooms.map(r=>r.area||"").filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+ v.innerHTML=`<div class="ph"><div><h1>${esc(S.board.school||"All rooms")}</h1><p>${S.board.rooms.length} rooms · ${all.length} devices · updated ${ago(lastOk)}</p></div>
+  <div class="tools" style="margin:0">${isManager()?`<button class="btn dk" type="button" id="addRoom">${ui("plus")} Add a room</button>`:""}${isAdmin()?`<button class="btn" type="button" id="setSchool">School name</button>`:""}</div></div>
+ <div class="stats">${[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<button class="stat s-${k}" type="button" data-st="${k}" aria-pressed="${filt.st===k}"><span class="si">${ui(k,2)}</span><span><b>${c(k)}</b><span>${n}</span></span></button>`).join("")}</div>
+ <div class="tools"><input type="search" id="q" placeholder="Search rooms, teachers, or devices" value="${esc(filt.q)}" aria-label="Search">${areas.length?`<select id="area" aria-label="Area"><option value="">All areas</option>${areas.map(a=>`<option ${filt.area===a?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}${filt.st?`<button class="btn sm" id="clr" type="button">Show everything</button>`:""}</div>
+ <div id="roomsOut"></div>`;
+ drawRooms();
+ $$(".stat",v).forEach(b=>b.onclick=()=>{filt.st=filt.st===b.dataset.st?"":b.dataset.st;boardView(v)});
+ $("#q").oninput=e=>{filt.q=e.target.value;drawRooms()};if($("#area"))$("#area").onchange=e=>{filt.area=e.target.value;drawRooms()};if($("#clr"))$("#clr").onclick=()=>{filt.st="";boardView(v)};
+ if($("#addRoom"))$("#addRoom").onclick=()=>roomForm();
+ if($("#setSchool"))$("#setSchool").onclick=async()=>{const n=prompt("School name shown at the top:",S.board.school||"");if(n!=null)await act("school",{school:n},"Saved")}}
+function drawRooms(){const out=$("#roomsOut");const q=filt.q.trim().toLowerCase();
+ const list=S.board.rooms.filter(r=>!filt.area||r.area===filt.area).map(r=>{const tn=teachersOf(r.id).map(t=>t.name).join(" ");
+   const devs=r.devices.filter(d=>(!filt.st||d.status===filt.st)&&(!q||`${r.name} ${r.area||""} ${tn} ${d.type} ${d.name||""} ${d.model||""} ${d.asset||""}`.toLowerCase().includes(q)));
+   return{r,devs:devs.length||(!filt.st&&q&&`${r.name} ${tn}`.toLowerCase().includes(q))?devs.length?devs:r.devices:(!filt.st&&!q?r.devices:[])}}).filter(x=>x.devs.length||(!filt.st&&!q));
+ if(!S.board.rooms.length){out.innerHTML=`<div class="empty">${isManager()?"No rooms yet. Press <b>Add a room</b> to start.":"No rooms have been set up yet."}</div>`;return}
+ if(!list.length){out.innerHTML=`<div class="empty">Nothing matches.</div>`;return}
+ const groups={};list.forEach(x=>(groups[x.r.area||""]=groups[x.r.area||""]||[]).push(x));
+ const keys=Object.keys(groups).sort((a,b)=>(a===""?1:0)-(b===""?1:0)||a.localeCompare(b,undefined,{numeric:true}));
+ out.innerHTML=keys.map(a=>`${keys.length>1||a?`<div class="area-h">${esc(a||"Other rooms")}</div>`:""}<div class="rooms">${groups[a].sort((x,y)=>x.r.name.localeCompare(y.r.name,undefined,{numeric:true})).map(({r,devs})=>roomCard(r,devs,!filt.st&&!q)).join("")}</div>`).join("");
+ wireTiles(out)}
+/* ===================== MY ROOM ===================== */
+function myView(v){const rs=S.me.rooms.map(room).filter(Boolean);const mine=S.board.tickets.filter(t=>t.by===S.me.username||S.me.rooms.includes(t.room));
+ v.innerHTML=`<div class="ph"><div><h1>${rs.length>1?"My rooms":"My room"}</h1><p>Tap anything that isn't working to tell your tech person.</p></div><button class="btn red" type="button" id="myRep">Report a problem</button></div>
+ ${rs.length?`<div class="rooms">${rs.map(r=>roomCard(r,r.devices,false)).join("")}</div>`:`<div class="empty">No room is assigned to your account yet. Ask your admin to add it.</div>`}
+ <h2 style="margin:28px 0 10px;font-size:1.15rem">Tickets for ${rs.length>1?"my rooms":"my room"}</h2>${ticketList(mine.filter(t=>t.state!=="fixed"),"Nothing open right now.")}
+ ${mine.some(t=>t.state==="fixed")?`<h2 style="margin:24px 0 10px;font-size:1.05rem;color:var(--muted)">Recently fixed</h2>${ticketList(mine.filter(t=>t.state==="fixed").slice(0,10),"")}`:""}`;
+ wireTiles(v);$("#myRep").onclick=()=>reportDlg(rs[0]&&rs[0].id)}
+/* ===================== TICKETS ===================== */
+let tTab="open";
+function ticketList(ts,empty){if(!ts.length)return empty?`<div class="empty">${empty}</div>`:"";return`<div class="tl">${ts.map(t=>{const r=room(t.room),d=r&&devOf(t.room,t.device);
+ return`<a class="card trow" href="#/t/${t.id}"><span class="t-${t.state==="fixed"?"ok":t.state==="open"?t.severity:"repair"}">${icon(d?d.type:"Other")}</span>
+  <div class="tx"><b>${esc(r?r.name:"Room removed")} · ${esc(d?dName(d):"Device removed")}</b><p>${esc(t.text)}</p></div>
+  <div class="meta">${t.unread?'<span class="unread" style="display:inline-block;margin-right:6px"></span>':""}<span class="pill p-${t.state} sev-${t.severity}">${t.state==="open"?(t.severity==="down"?"Not working":"Has a problem"):TS[t.state]}</span><div style="margin-top:6px">${esc(t.byName||"")} · ${ago(t.updated||t.opened)}</div>${t.assignee?`<div>Handling: ${esc(nameOf(t.assignee))}</div>`:""}</div></a>`}).join("")}</div>`}
+function ticketsView(v){const mgr=isManager();const T=S.board.tickets;
+ const tabs=mgr?[["open","Open",T.filter(t=>t.state!=="fixed")],["minejob","Assigned to me",T.filter(t=>t.state!=="fixed"&&t.assignee===S.me.username)],["unassigned","Not assigned",T.filter(t=>t.state!=="fixed"&&!t.assignee)],["fixed","Fixed",T.filter(t=>t.state==="fixed")]]
+  :[["open","Open",T.filter(t=>t.state!=="fixed"&&t.by===S.me.username)],["fixed","Fixed",T.filter(t=>t.state==="fixed"&&t.by===S.me.username)]];
+ if(!tabs.find(x=>x[0]===tTab))tTab="open";const cur=tabs.find(x=>x[0]===tTab);
+ v.innerHTML=`<div class="ph"><div><h1>${mgr?"Tickets":"My tickets"}</h1><p>${mgr?"Every reported problem, newest first.":"Problems you've reported, and replies from your tech person."}</p></div><button class="btn red" type="button" id="tkRep">Report a problem</button></div>
+ <div class="seg" role="group" aria-label="Filter" style="margin-bottom:14px">${tabs.map(([k,n,l])=>`<button type="button" data-tab="${k}" aria-pressed="${k===tTab}">${n} (${l.length})</button>`).join("")}</div>
+ ${ticketList(cur[2],tTab==="fixed"?"Nothing fixed in the last 45 days.":"Nothing here. Everything reported has been handled.")}`;
+ $$("[data-tab]",v).forEach(b=>b.onclick=()=>{tTab=b.dataset.tab;ticketsView(v)});$("#tkRep").onclick=()=>reportDlg()}
+function ticketView(v,[id]){const t=S.board.tickets.find(x=>x.id===id);if(!t){v.innerHTML=`<div class="empty">That ticket isn't available. It may have been removed or fixed more than 45 days ago. <a href="#/tickets">Back to tickets</a></div>`;return}
+ const r=room(t.room),d=r&&devOf(t.room,t.device),mgr=isManager(),own=t.by===S.me.username;const staff=S.people.filter(p=>p.role!=="teacher");
+ const stCls=t.state==="fixed"?"ok":t.state==="open"?t.severity:"repair";
+ v.innerHTML=`<p style="margin:0 0 12px"><a href="#/tickets">← All tickets</a></p><div class="tk"><div class="card pad">
+  <div class="tkh"><span class="t-${stCls}">${icon(d?d.type:"Other")}</span><div><h1>${esc(r?r.name:"Room removed")} · ${esc(d?dName(d):"Device removed")}</h1><p><span class="pill p-${t.state} sev-${t.severity}">${t.state==="open"?(t.severity==="down"?"Not working":"Has a problem"):TS[t.state]}</span> &nbsp;Reported by ${esc(t.byName||"someone")} ${ago(t.opened)}</p></div></div>
+  <div class="thread"><div class="msg first"><div class="by"><span>${esc(t.byName||"Reporter")}</span><span>${when(t.opened)}</span></div>${esc(t.text)}</div>
+  ${(t.comments||[]).map(c=>c.role==="system"?`<div class="msg sys">${esc(c.text)} · ${ago(c.ts)}</div>`:`<div class="msg ${c.by===S.me.username?"mine":c.role!=="teacher"?"staff":""}"><div class="by"><span>${esc(c.byName)}${c.role!=="teacher"?` · ${ROLE[c.role]||""}`:""}</span><span>${when(c.ts)}</span></div>${esc(c.text)}</div>`).join("")}</div>
+  ${mgr||own||(S.me.rooms||[]).includes(t.room)?`<form class="compose" id="fMsg"><label class="sr" for="mtxt">Message</label><textarea id="mtxt" name="m" placeholder="${mgr?"Reply to the teacher":"Add details or ask a question"}" maxlength="1000"></textarea><button class="btn dk" type="submit">${ui("send")} Send</button></form><p class="hint">Press Ctrl+Enter to send.</p>`:""}
+ </div>
+ <aside class="card pad side"><h3>Details</h3><dl class="kv"><dt>Room</dt><dd>${esc(r?r.name:"")}${r&&r.area?` (${esc(r.area)})`:""}</dd><dt>Device</dt><dd>${esc(d?d.type:"")}${d&&d.name?`: ${esc(d.name)}`:""}</dd>${d&&d.model?`<dt>Model</dt><dd>${esc(d.model)}</dd>`:""}${d&&d.asset?`<dt>Asset tag</dt><dd>${esc(d.asset)}</dd>`:""}
+  <dt>Opened</dt><dd>${when(t.opened)}</dd>${t.closed?`<dt>Fixed</dt><dd>${when(t.closed)}</dd>`:""}<dt>Handling</dt><dd>${t.assignee?esc(nameOf(t.assignee)):"Not assigned"}</dd></dl>
+  ${mgr?`<h3 style="margin-top:18px">Status</h3><div class="btns">${Object.entries(TS).map(([k,n])=>`<button class="btn ${t.state===k?"dk":""}" type="button" data-state="${k}" ${t.state===k?"disabled":""}>${n}</button>`).join("")}</div>
+   <label class="l" for="asg">Who's handling it</label><select id="asg"><option value="">Not assigned</option>${staff.map(p=>`<option value="${p.username}" ${t.assignee===p.username?"selected":""}>${esc(p.name)}</option>`).join("")}</select>`:
+   own&&t.state!=="fixed"?`<div class="btns"><button class="btn" type="button" data-state="fixed">${ui("check")} It's working now</button></div><p class="hint">Use this if the problem went away on its own.</p>`:""}
+  ${d?`<div class="btns" style="margin-top:16px"><button class="btn" type="button" id="seeDev">${ui("list")} Device history</button></div>`:""}</aside></div>`;
+ if(t.unread)api("seen",{ticket:t.id}).then(()=>{t.unread=false;shell()}).catch(()=>{});
+ const f=$("#fMsg");if(f){bindForm(f,async fd=>{const m=String(fd.get("m")||"").trim();if(!m)return;await act("comment",{ticket:t.id,text:m});});$("#mtxt").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();f.requestSubmit()}})}
+ $$("[data-state]",v).forEach(b=>b.onclick=()=>act("ticketState",{ticket:t.id,state:b.dataset.state},b.dataset.state==="fixed"?"Marked fixed":"Status updated"));
+ if($("#asg"))$("#asg").onchange=e=>act("assign",{ticket:t.id,assignee:e.target.value},"Saved");
+ if($("#seeDev"))$("#seeDev").onclick=()=>deviceDlg(t.room,t.device)}
+/* ===================== DIALOGS ===================== */
+function dlg(html,cls=""){const d=$("#dlg");d.className=cls;d.innerHTML=html;if(!d.open)d.showModal();$$("[data-close]",d).forEach(b=>b.onclick=()=>d.close());return d}
+function reportDlg(rid,did){if(!S.board.rooms.length){toast("No rooms are set up yet.");return}
+ const def=rid||(S.me.rooms||[])[0]||localStorage.getItem("rsb.lastRoom")||S.board.rooms[0].id;
+ const d=dlg(`<form class="dlg" id="fRep" novalidate><h2>Report a problem</h2><p class="hint" style="margin-top:0">Your tech person sees it on the board right away.</p>
+  <label class="l" for="rRoom">Room</label><select id="rRoom" name="room">${S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(r=>`<option value="${r.id}">${esc(r.name)}${r.area?` · ${esc(r.area)}`:""}</option>`).join("")}</select>
+  <label class="l">What isn't working?</label><div class="typegrid" id="rDevs"></div>
+  <label class="l">How bad is it?</label><div class="sev"><label><input type="radio" name="sev" value="down" checked><span>Not working at all<small>Can't use it</small></span></label><label><input type="radio" name="sev" value="issue"><span>Has a problem<small>Usable, but something's wrong</small></span></label></div>
+  <label class="l" for="rText">What's happening?</label><textarea id="rText" name="text" maxlength="1000" placeholder="Projector turns on but says “No signal” from my laptop."></textarea>
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn red" type="submit">Send report</button></div></form>`,"wide");
+ const fillDevs=()=>{const r=room($("#rRoom").value);$("#rDevs").innerHTML=r&&r.devices.length?r.devices.map((x,i)=>`<label class="t-${x.status}"><input type="radio" name="dev" value="${x.id}" ${(did?x.id===did:i===0)?"checked":""}>${icon(x.type)}${esc(dName(x))}</label>`).join(""):`<p class="hint">This room has no devices listed yet.</p>`};
+ $("#rRoom").value=room(def)?def:S.board.rooms[0].id;fillDevs();$("#rRoom").onchange=fillDevs;
+ bindForm($("#fRep"),async fd=>{const text=String(fd.get("text")||"").trim();if(!fd.get("dev"))throw{msg:"Pick the device that isn't working."};if(!text)throw{msg:"Describe what's happening."};
+  const j=await act("report",{room:fd.get("room"),device:fd.get("dev"),severity:fd.get("sev"),text},"Report sent. Thanks!");localStorage.setItem("rsb.lastRoom",fd.get("room"));d.close();if(j&&j.ticket)location.hash="#/t/"+j.ticket});
+ setTimeout(()=>(did?$("#rText"):$("#rRoom")).focus(),60)}
+function deviceDlg(rid,did){const r=room(rid),x=devOf(rid,did);if(!x)return;const mgr=isManager();const hist=S.board.tickets.filter(t=>t.device===did);
+ const op=hist.filter(t=>t.state!=="fixed");
+ const d=dlg(`<div class="dlg"><div class="devhead"><span class="t-${x.status}">${icon(x.type)}</span><div><h2>${esc(dName(x))}</h2><p class="hint" style="margin:2px 0 0">${esc(r.name)}${r.area?` · ${esc(r.area)}`:""} · ${esc(x.type)}</p><span class="pill p-${x.status==="ok"?"fixed":x.status==="repair"?"progress":"open"} sev-${x.status}" style="margin-top:6px">${DS[x.status]}</span>${x.statusNote?` <span class="hint">${esc(x.statusNote)}</span>`:""}</div></div>
+  ${x.model||x.serial||x.asset||x.location||x.notes?`<dl class="kv" style="margin-top:16px">${x.model?`<dt>Model</dt><dd>${esc(x.model)}</dd>`:""}${x.serial?`<dt>Serial</dt><dd>${esc(x.serial)}</dd>`:""}${x.asset?`<dt>Asset tag</dt><dd>${esc(x.asset)}</dd>`:""}${x.location?`<dt>Where</dt><dd>${esc(x.location)}</dd>`:""}${x.notes?`<dt>Notes</dt><dd style="white-space:pre-wrap">${esc(x.notes)}</dd>`:""}</dl>`:""}
+  <h3 style="margin:18px 0 0;font-size:1rem">${op.length?`Open tickets (${op.length})`:"History"}</h3><div class="hist">${hist.length?hist.slice(0,12).map(t=>`<a href="#/t/${t.id}" data-go><span><b>${t.state==="fixed"?"Fixed":TS[t.state]}</b> · ${esc(t.text.slice(0,70))}${t.text.length>70?"…":""}</span><span class="hint" style="margin:0;white-space:nowrap">${ago(t.updated||t.opened)}</span></a>`).join(""):`<p class="hint">No problems reported for this device yet.</p>`}</div>
+  <div class="foot"><button class="btn" type="button" data-close>Close</button>${mgr?`<button class="btn" type="button" id="dEdit">${ui("edit")} Edit details</button>`:""}<button class="btn red" type="button" id="dRep">Report a problem</button></div></div>`);
+ $$("[data-go]",d).forEach(a=>a.onclick=()=>d.close());$("#dRep").onclick=()=>{d.close();reportDlg(rid,did)};if($("#dEdit"))$("#dEdit").onclick=()=>deviceForm(rid,did)}
+function deviceForm(rid,did){const r=room(rid),x=did?devOf(rid,did):null;const types=S.types;
+ const d=dlg(`<form class="dlg" id="fDev" novalidate><h2>${x?"Edit device":"Add a device to "+esc(r.name)}</h2>
+  <label class="l">Type</label><div class="typegrid">${types.map((t,i)=>`<label><input type="radio" name="type" value="${esc(t)}" ${(x?x.type===t:i===0)?"checked":""}>${icon(t)}${esc(t)}</label>`).join("")}</div>
+  <div class="g2"><div><label class="l" for="dn">Label (optional)</label><input id="dn" name="name" maxlength="80" value="${esc(x&&x.name||"")}" placeholder="Front projector"></div>
+  <div><label class="l" for="dm">Model</label><input id="dm" name="model" maxlength="80" value="${esc(x&&x.model||"")}" placeholder="Epson PowerLite 685W"></div>
+  <div><label class="l" for="ds">Serial number</label><input id="ds" name="serial" maxlength="80" value="${esc(x&&x.serial||"")}"></div>
+  <div><label class="l" for="da">Asset tag</label><input id="da" name="asset" maxlength="80" value="${esc(x&&x.asset||"")}" placeholder="FS-0142"></div></div>
+  <label class="l" for="dl">Where in the room (optional)</label><input id="dl" name="location" maxlength="80" value="${esc(x&&x.location||"")}" placeholder="Ceiling mount, front">
+  <label class="l" for="dno">Notes (only you and techs see these)</label><textarea id="dno" name="notes" maxlength="1000">${esc(x&&x.notes||"")}</textarea>
+  ${x?`<label class="l" for="dst">Status</label><select id="dst" name="status">${Object.entries(DS).map(([k,n])=>`<option value="${k}" ${x.status===k?"selected":""}>${n}</option>`).join("")}</select>
+   <label class="l" for="dsn">Status note shown to staff (optional)</label><input id="dsn" name="statusNote" maxlength="160" value="${esc(x.statusNote||"")}" placeholder="Replacement lamp ordered, back Friday">
+   <label class="l" for="dmv">Room</label><select id="dmv" name="moveTo">${S.board.rooms.map(o=>`<option value="${o.id}" ${o.id===rid?"selected":""}>${esc(o.name)}</option>`).join("")}</select>`:""}
+  <p class="err" role="alert"></p><div class="foot">${x?`<button class="btn" type="button" id="dDel" style="margin-right:auto;color:var(--down)">${ui("trash")} Remove</button>`:""}<button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">${x?"Save":"Add device"}</button></div></form>`,"wide");
+ bindForm($("#fDev"),async fd=>{const o=Object.fromEntries(fd.entries());if(x){const statusChanged=o.status!==x.status||o.statusNote!==(x.statusNote||"");if(!statusChanged){delete o.status;delete o.statusNote}await act("editDevice",{room:rid,device:did,...o},"Saved")}else await act("addDevice",{room:rid,...o},"Device added");d.close()});
+ if($("#dDel"))$("#dDel").onclick=async()=>{if(!confirm(`Remove ${dName(x)} and its ticket history?`))return;await act("delDevice",{room:rid,device:did},"Removed");d.close()}}
+function roomForm(r){const areas=[...new Set(S.board.rooms.map(x=>x.area).filter(Boolean))];
+ const d=dlg(`<form class="dlg" id="fRoom" novalidate><h2>${r?"Edit room":"Add a room"}</h2>
+  <div class="g2"><div><label class="l" for="rn">Room name or number</label><input id="rn" name="name" maxlength="60" required value="${esc(r?r.name:"")}" placeholder="Room 112"></div>
+  <div><label class="l" for="ra">Building or hallway</label><input id="ra" name="area" maxlength="60" list="areasL" value="${esc(r?r.area||"":"")}" placeholder="Upper School"><datalist id="areasL">${areas.map(a=>`<option value="${esc(a)}">`).join("")}</datalist></div></div>
+  ${r?"":`<label class="l">What's in this room? (you can add more later)</label><div class="typegrid">${S.types.map(t=>`<label><input type="checkbox" name="dev" value="${esc(t)}" ${["Projector","Computer"].includes(t)?"checked":""}>${icon(t)}${esc(t)}</label>`).join("")}</div>`}
+  ${r&&isAdmin()?`<p class="hint">To assign a teacher to this room, edit their account on the People page.</p>`:""}
+  <p class="err" role="alert"></p><div class="foot">${r?`<button class="btn" type="button" id="rDel" style="margin-right:auto;color:var(--down)">${ui("trash")} Delete room</button>`:""}<button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">${r?"Save":"Add room"}</button></div></form>`,"wide");
+ bindForm($("#fRoom"),async fd=>{if(!String(fd.get("name")).trim())throw{msg:"Name the room."};if(r)await act("editRoom",{room:r.id,name:fd.get("name"),area:fd.get("area")},"Saved");else await act("addRoom",{name:fd.get("name"),area:fd.get("area"),devices:fd.getAll("dev")},"Room added");d.close()});
+ if($("#rDel"))$("#rDel").onclick=async()=>{if(!confirm(`Delete ${r.name}, its devices, and its tickets?`))return;await act("delRoom",{room:r.id},"Room deleted");d.close()}}
+/* ===================== PEOPLE ===================== */
+function roomPicker(sel){return`<div class="typegrid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr))">${S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(r=>`<label style="flex-direction:row;justify-content:flex-start;padding:9px 10px"><input type="checkbox" name="rooms" value="${r.id}" ${sel.includes(r.id)?"checked":""} style="position:static;opacity:1;pointer-events:auto;width:16px;height:16px">${esc(r.name)}</label>`).join("")||'<p class="hint">Add rooms on the Board first.</p>'}</div>`}
+function peopleView(v){if(!isAdmin()){v.innerHTML=`<div class="empty">Only an admin can manage accounts.</div>`;return}
+ const us=S.users.slice().sort((a,b)=>(a.disabled-b.disabled)||a.name.localeCompare(b.name));
+ v.innerHTML=`<div class="ph"><div><h1>People</h1><p>Give each teacher an account and their room. They choose their own password the first time they sign in.</p></div><div class="tools" style="margin:0"><button class="btn" type="button" id="bulk">${ui("users")} Add many at once</button><button class="btn dk" type="button" id="addP">${ui("plus")} Add a person</button></div></div>
+ <div class="card" style="overflow-x:auto"><table class="t"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Rooms</th><th>Last signed in</th><th></th></tr></thead><tbody>
+ ${us.map(u=>`<tr class="${u.disabled?"off":""}"><td><b>${esc(u.name)}</b>${u.mustChange?`<div class="hint" style="margin:0">Hasn't set a password yet</div>`:""}${u.disabled?`<div class="hint" style="margin:0">Turned off</div>`:""}</td><td>${esc(u.username)}</td><td><span class="role ${u.role}">${ROLE[u.role]}</span></td><td>${esc(u.rooms.map(id=>(room(id)||{}).name).filter(Boolean).join(", "))||'<span class="hint">None</span>'}</td><td>${u.lastLogin?ago(u.lastLogin):'<span class="hint">Never</span>'}</td><td><button class="btn sm" type="button" data-u="${esc(u.username)}">Edit</button></td></tr>`).join("")}</tbody></table></div>
+ <div class="card pad" style="margin-top:18px"><h3 style="margin:0 0 6px">Wall display links</h3><p class="hint" style="margin-top:0">A private link for a TV in the office. It shows problems in big type and needs no sign-in. Anyone with the link can see the board, so only put it on screens you control.</p>
+  <div id="disp">${(S.displays||[]).map(x=>`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)"><b style="min-width:140px">${esc(x.name)}</b><code style="flex:1;min-width:200px;font-size:.8rem;word-break:break-all;color:var(--muted)">${esc(dispUrl(x.key))}</code><button class="btn sm" type="button" data-copy="${esc(dispUrl(x.key))}">${ui("copy")} Copy</button><a class="btn sm" href="${esc(dispUrl(x.key))}" target="_blank" rel="noopener">Open</a><button class="btn sm" type="button" data-deld="${x.id}">${ui("trash")}</button></div>`).join("")||'<p class="hint">No display links yet.</p>'}</div>
+  <form id="fDisp" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><label class="sr" for="dispName">Display name</label><input id="dispName" name="n" placeholder="Front office TV" style="max-width:280px"><button class="btn" type="submit">${ui("tv")} Make a display link</button></form></div>`;
+ $$("[data-u]",v).forEach(b=>b.onclick=()=>personForm(S.users.find(u=>u.username===b.dataset.u)));$("#addP").onclick=()=>personForm();$("#bulk").onclick=bulkForm;
+ $$("[data-copy]",v).forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);toast("Link copied")}catch(e){prompt("Copy this link:",b.dataset.copy)}});
+ $$("[data-deld]",v).forEach(b=>b.onclick=async()=>{if(confirm("Remove this display link? Screens using it will stop updating."))await act("deleteDisplay",{id:b.dataset.deld},"Removed")});
+ bindForm($("#fDisp"),async fd=>{await act("addDisplay",{name:fd.get("n")},"Display link made")})}
+const dispUrl=k=>location.origin+location.pathname.replace(/index\.html$/,"")+"?display="+encodeURIComponent(k);
+function personForm(u){const d=dlg(`<form class="dlg" id="fP" novalidate><h2>${u?esc(u.name):"Add a person"}</h2>
+  <div class="g2"><div><label class="l" for="pn">Full name</label><input id="pn" name="name" maxlength="60" required value="${esc(u?u.name:"")}" placeholder="Jane Allen"></div>
+  <div><label class="l" for="pu">Username</label><input id="pu" name="username" maxlength="32" autocapitalize="none" spellcheck="false" ${u?"disabled":""} value="${esc(u?u.username:"")}" placeholder="jallen"></div></div>
+  <label class="l" for="pr">Role</label><select id="pr" name="role">${Object.entries(ROLE).map(([k,n])=>`<option value="${k}" ${(u?u.role:"teacher")===k?"selected":""}>${n}${k==="admin"?" (everything, including accounts)":k==="tech"?" (rooms, devices, and tickets)":" (reports and their room)"}</option>`).join("")}</select>
+  <label class="l">Rooms</label>${roomPicker(u?u.rooms:[])}
+  <p class="err" role="alert"></p>
+  <div class="foot">${u?`<button class="btn" type="button" id="pReset" style="margin-right:auto">${ui("key")} Reset password</button><button class="btn" type="button" id="pOff">${u.disabled?"Turn on":"Turn off"}</button><button class="btn" type="button" id="pDel" style="color:var(--down)">${ui("trash")}</button>`:""}<button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">${u?"Save":"Create account"}</button></div></form>`,"wide");
+ const nm=$("#pn"),un=$("#pu");if(!u)nm.addEventListener("input",()=>{if(un.dataset.touched)return;const p=nm.value.trim().toLowerCase().split(/\s+/);un.value=p.length>1?(p[0][0]+p[p.length-1]).replace(/[^a-z0-9]/g,""):(p[0]||"").replace(/[^a-z0-9]/g,"")});un.addEventListener("input",()=>un.dataset.touched=1);
+ bindForm($("#fP"),async fd=>{const rooms=fd.getAll("rooms");
+  if(u){await act("updateUser",{username:u.username,name:fd.get("name"),role:fd.get("role"),rooms},"Saved");d.close()}
+  else{if(!String(fd.get("name")).trim()||!String(fd.get("username")).trim())throw{msg:"Fill in a name and a username."};const j=await act("createUsers",{users:[{name:fd.get("name"),username:fd.get("username"),role:fd.get("role"),rooms}]});showSlips(j.created,"Account created")}});
+ if(u){$("#pReset").onclick=async()=>{if(!confirm(`Give ${u.name} a new temporary password? Their current password stops working.`))return;const j=await act("resetPassword",{username:u.username});showSlips(j.created,"New temporary password")};
+  $("#pOff").onclick=async()=>{await act("updateUser",{username:u.username,disabled:!u.disabled},u.disabled?"Turned on":"Turned off");d.close()};
+  $("#pDel").onclick=async()=>{if(!confirm(`Delete ${u.name}'s account? Their tickets stay on the board.`))return;await act("deleteUser",{username:u.username},"Deleted");d.close()}}}
+function bulkForm(){const d=dlg(`<form class="dlg" id="fB" novalidate><h2>Add many people at once</h2><p class="hint" style="margin-top:0">One person per line: <b>name, room</b>. Add a username or role if you like: <b>name, room, username, role</b>. Rooms are matched by name, and usernames are made from the name when left out. Separate several rooms with a slash, like <b>Room 101/Room 102</b>.</p>
+  <label class="l" for="bt">People</label><textarea id="bt" name="t" style="min-height:200px;font-family:ui-monospace,Consolas,monospace;font-size:.9rem" placeholder="Jane Allen, Room 112\nMark Lee, Room 114\nSara Ortiz, Library, sortiz\nTom Price, , tprice, tech"></textarea>
+  <div id="bPrev" class="hint"></div><p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Create accounts</button></div></form>`,"wide");
+ const parse=()=>{const taken=new Set(S.users.map(u=>u.username));const rows=[],probs=[];
+  $("#bt").value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach((l,i)=>{const [name,rms,user,role]=l.split(/\s*[,\t]\s*/);if(!name){probs.push(`Line ${i+1} has no name.`);return}
+   const rooms=[];String(rms||"").split("/").map(s=>s.trim()).filter(Boolean).forEach(rn=>{const r=S.board.rooms.find(x=>x.name.toLowerCase()===rn.toLowerCase());if(r)rooms.push(r.id);else probs.push(`Line ${i+1}: no room named “${rn}”.`)});
+   const p=name.toLowerCase().split(/\s+/);let un=(user||(p.length>1?p[0][0]+p[p.length-1]:p[0])).toLowerCase().replace(/[^a-z0-9._-]/g,"");let base=un,k=2;while(taken.has(un))un=base+k++;taken.add(un);
+   const rl=String(role||"teacher").toLowerCase();rows.push({name,username:un,rooms,role:["admin","tech","teacher"].includes(rl)?rl:"teacher"})});return{rows,probs}};
+ $("#bt").oninput=()=>{const {rows,probs}=parse();$("#bPrev").innerHTML=rows.length?`${rows.length} account${rows.length>1?"s":""}: ${rows.slice(0,6).map(r=>`${esc(r.name)} (${esc(r.username)})`).join(", ")}${rows.length>6?", …":""}${probs.length?`<br><span style="color:var(--down)">${probs.map(esc).join("<br>")}</span>`:""}`:""};
+ bindForm($("#fB"),async()=>{const {rows,probs}=parse();if(!rows.length)throw{msg:"Add at least one person."};if(probs.length)throw{msg:"Fix the lines in red first."};const j=await act("createUsers",{users:rows});showSlips(j.created,`${j.created.length} accounts created`)})}
+function showSlips(list,title){const url=location.origin+location.pathname.replace(/index\.html$/,"");
+ const d=dlg(`<div class="dlg"><h2>${esc(title)}</h2><p class="hint" style="margin-top:0">Write these down or print them now. Temporary passwords can't be shown again. Each person picks their own password the first time they sign in.</p>
+  <div class="slips" id="slips">${list.map(c=>`<div class="slip"><b>${esc(c.name)}</b><br>Go to: ${esc(url)}<br>Username: <code>${esc(c.username)}</code><br>Temporary password: <code>${esc(c.password)}</code></div>`).join("")}</div>
+  <div class="foot"><button class="btn" type="button" id="cpS">${ui("copy")} Copy all</button><button class="btn" type="button" id="prS">${ui("print")} Print login slips</button><button class="btn dk" type="button" data-close>Done</button></div></div>`,"wide");
+ $("#cpS").onclick=async()=>{const t=list.map(c=>`${c.name}\t${c.username}\t${c.password}`).join("\n");try{await navigator.clipboard.writeText(t);toast("Copied")}catch(e){prompt("Copy:",t)}};
+ $("#prS").onclick=()=>{const w=window.open("","_blank");if(!w){toast("Allow pop-ups to print");return}w.document.write(`<!doctype html><title>Login slips</title><style>body{font:14px system-ui,sans-serif;margin:12mm}.g{display:grid;grid-template-columns:1fr 1fr;gap:6mm}.s{border:1px dashed #888;border-radius:6px;padding:5mm;break-inside:avoid}.s img{height:28px;float:right}.s b{font-size:16px}code{font:600 15px ui-monospace,Consolas,monospace;background:#f1f3f6;padding:1px 5px;border-radius:4px}p{margin:3px 0}</style><div class="g">${list.map(c=>`<div class="s"><img src="${location.origin+location.pathname.replace(/index\.html$/,"")}assets/logo-mark.png" alt=""><b>${esc(c.name)}</b><p>Room Tech Status${S.board.school?" · "+esc(S.board.school):""}</p><p>Go to: <b>${esc(url)}</b></p><p>Username: <code>${esc(c.username)}</code></p><p>Temporary password: <code>${esc(c.password)}</code></p><p style="color:#666;font-size:12px">You'll choose your own password when you first sign in.</p></div>`).join("")}</div><script>onload=()=>{print()}<\/script>`);w.document.close()}}
+/* ===================== ACTIVITY ===================== */
+function activityView(v){if(!isManager()){v.innerHTML="";return}
+ v.innerHTML=`<div class="ph"><div><h1>Activity</h1><p>The latest changes on the board, newest first.</p></div></div><div class="card" style="overflow-x:auto"><table class="t"><tbody>${(S.log||[]).map(l=>`<tr><td style="white-space:nowrap;color:var(--muted)">${when(l.ts)}</td><td><b>${esc(nameOf(l.by))}</b></td><td>${esc(l.text)}</td></tr>`).join("")||'<tr><td class="hint">Nothing yet.</td></tr>'}</tbody></table></div>`}
+/* ===================== WALL DISPLAY ===================== */
+async function wall(key){$("#auth").hidden=true;$("#app").hidden=true;const w=$("#wall");w.hidden=false;let B=null,ok=0;
+ async function pull(){try{const r=await fetch(API+"?display="+encodeURIComponent(key),{cache:"no-store"});const j=await r.json();if(!r.ok)throw j;B=j.board;ok=Date.now();draw()}catch(e){if(!B)w.innerHTML=`<div class="good">${esc(e.error||"Can't load the board.")}</div>`}}
+ function draw(){const all=B.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;const bad=all.filter(x=>x.d.status!=="ok").sort((a,b)=>RANK[b.d.status]-RANK[a.d.status]);
+  w.innerHTML=`<div class="wh"><img src="assets/logo-mark-white.png" alt=""><b>${esc(B.school||"Room Tech Status")}</b><span class="clk" id="wClk"></span></div>
+  <div class="wc">${[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<div class="c-${k}"><b>${c(k)}</b><span>${n}</span></div>`).join("")}</div>
+  <div class="wl">${bad.length?bad.map(({r,d})=>{const t=B.tickets.find(x=>x.device===d.id&&x.state!=="fixed");return`<div class="wi t-${d.status}">${icon(d.type)}<div><b>${esc(r.name)}</b><span>${esc(dName(d))} · ${DS[d.status]}</span>${d.statusNote||t?`<p>${esc(d.statusNote||t.text)}</p>`:""}</div></div>`}).join(""):`<div class="good">✓ All classroom tech is working</div>`}</div>
+  <div class="wf"><span>Updated ${new Date(ok).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}</span><span>Report problems at ${esc(location.host+location.pathname.replace(/index\.html$/,""))}</span></div>`;tick()}
+ const tick=()=>{const e=$("#wClk");if(e)e.textContent=new Date().toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})};
+ setInterval(tick,1000);await pull();setInterval(pull,20000);
+ try{if("wakeLock" in navigator)await navigator.wakeLock.request("screen")}catch(e){}}
+/* ===================== BOOT ===================== */
+window.RSB={get S(){return S}};
+const dk=new URLSearchParams(location.search).get("display");
+(async()=>{if(dk)return wall(dk);
+ if(location.protocol==="file:"){authShell(`<div class="banner bad">This board needs its Netlify server function, so it can't run from a file on your computer. Deploy it to Netlify and open the site address.</div>`);return}
+ if(tok){try{const j=await api("me");if(j.me.mustChange){S={me:j.me};return auth("change")}return start()}catch(e){if(e.mustChange)return;if(e.nofn||e.net||e.setup)return authShell(`<div class="banner bad">${esc(e.msg)}</div>`)}}
+ try{const st=await api("status");auth(st.needsSetup?"setup":"login")}catch(e){authShell(`<div class="banner bad">${esc(e.msg)}${e.setup?"<br><br>In Netlify, go to Site configuration > Environment variables, add ADMIN_PIN, then redeploy.":""}</div>`)}})();
+setInterval(async()=>{if(S&&S.board&&!document.hidden&&!$("#dlg").open&&!document.activeElement.matches("textarea,input")){if(await load(true))route()}},20000);
+document.addEventListener("visibilitychange",async()=>{if(!document.hidden&&S&&S.board&&!$("#dlg").open){if(await load(true))route()}});
 if("serviceWorker" in navigator&&location.protocol==="https:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 })();
+
 </script>
 </body>
 </html>
