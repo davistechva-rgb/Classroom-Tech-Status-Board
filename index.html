@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Room Tech Status | Davis Tech Support</title>
+<meta name="description" content="See which classroom tech is working, and report a problem in seconds.">
+<meta name="theme-color" content="#1B2A41">
+<link rel="icon" href="assets/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#F5F7FA;--card:#fff;--ink:#16202E;--muted:#5F6B7A;--line:#DFE4EA;--nav:#1B2A41;
+ --ok:#1E8E5A;--ok-bg:#E4F4EC;--issue:#B7791F;--issue-bg:#FDF2DC;--down:#C53030;--down-bg:#FCE8E8;--repair:#2B6CB0;--repair-bg:#E3EEFA;--r:12px}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+header{background:var(--nav);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 0 12px}
+.in{max-width:1240px;margin:0 auto;padding:0 20px}
+header .in{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header img{height:38px}header h1{margin:0;font-size:1.15rem;font-weight:700}header .sub{display:block;font-size:.82rem;color:#AFC0D6;font-weight:500}
+header .sp{flex:1}
+.btn{appearance:none;font:600 .95rem "IBM Plex Sans",sans-serif;padding:10px 15px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;min-height:42px;white-space:nowrap}
+.btn:hover{border-color:#B8C2CE}.btn.p{background:#E53E3E;border-color:#E53E3E;color:#fff}.btn.p:hover{background:#C53030}
+.btn.dk{background:var(--nav);border-color:var(--nav);color:#fff}.btn.sm{padding:6px 10px;min-height:34px;font-size:.86rem}
+header .btn{background:transparent;color:#fff;border-color:#3A4D6B}header .btn.p{background:#E53E3E;border-color:#E53E3E}
+main{padding:20px 0 50px}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.chip{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-weight:600;cursor:pointer;font:600 .92rem "IBM Plex Sans",sans-serif;color:var(--ink)}
+.chip[aria-pressed=true]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;display:inline-block}
+.d-ok{background:var(--ok)}.d-issue{background:var(--issue)}.d-down{background:var(--down)}.d-repair{background:var(--repair)}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.tools input,.tools select{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;min-height:42px}
+.tools input{flex:1;min-width:200px}
+.lay{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+@media (max-width:1000px){.lay{grid-template-columns:1fr}}
+.area h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 10px;font-weight:700}.area:first-child h2{margin-top:0}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.room{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 14px 10px;border-top:5px solid var(--ok)}
+.room.st-issue{border-top-color:var(--issue)}.room.st-down{border-top-color:var(--down)}.room.st-repair{border-top-color:var(--repair)}
+.room h3{margin:0 0 8px;font-size:1.05rem;display:flex;justify-content:space-between;gap:8px;align-items:baseline}.room h3 span{font-size:.8rem;color:var(--muted);font-weight:500}
+.dv{display:flex;align-items:center;gap:9px;width:100%;appearance:none;background:none;border:0;border-top:1px solid var(--line);padding:8px 2px;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.dv:first-of-type{border-top:0}.dv:hover{background:#F8FAFC}.dv .nm{flex:1;min-width:0}.dv .nm small{display:block;color:var(--muted);font-size:.8rem;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv .tg{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.t-ok{background:var(--ok-bg);color:var(--ok)}.t-issue{background:var(--issue-bg);color:var(--issue)}.t-down{background:var(--down-bg);color:var(--down)}.t-repair{background:var(--repair-bg);color:var(--repair)}
+.room .ad{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.side{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+.side h2{margin:0 0 10px;font-size:1.05rem}
+.rp{border-top:1px solid var(--line);padding:12px 0}.rp:first-of-type{border-top:0}
+.rp .w{font-weight:700}.rp .meta{color:var(--muted);font-size:.85rem}.rp p{margin:6px 0}.rp .reply{background:#F5F7FA;border-radius:8px;padding:8px 10px;font-size:.92rem}
+.rp .act{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
+.note{background:var(--repair-bg);color:#1A4971;border-radius:var(--r);padding:14px 16px;margin-bottom:16px}
+.note.bad{background:var(--down-bg);color:#822727}
+dialog{border:0;border-radius:16px;padding:0;max-width:560px;width:calc(100% - 24px);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(22,32,46,.55)}
+.dlg{padding:22px}.dlg h2{margin:0 0 4px;font-size:1.25rem}
+.dlg label{display:block;font-weight:600;font-size:.92rem;margin:14px 0 6px}
+.dlg input,.dlg select,.dlg textarea{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.dlg textarea{min-height:90px;resize:vertical}
+.dlg input:focus,.dlg select:focus,.dlg textarea:focus,.tools input:focus{outline:none;border-color:#4A6FA5;box-shadow:0 0 0 3px rgba(74,111,165,.18)}
+.sev{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sev label{margin:0;display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px;cursor:pointer;font-weight:600}
+.sev label:has(input:checked){border-color:var(--ink);background:#F5F7FA}.sev input{width:auto;margin-top:4px}
+.sev small{display:block;font-weight:400;color:var(--muted)}
+.foot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.types{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}.types label{margin:0;font-weight:500;display:flex;gap:8px;align-items:center}.types input{width:auto}
+.err{color:var(--down);font-size:.92rem;margin-top:8px;min-height:1em}
+.upd{color:var(--muted);font-size:.85rem;margin-left:auto;align-self:center}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--nav);color:#fff;padding:10px 16px;border-radius:9px;font-weight:600;opacity:0;transition:.2s;pointer-events:none;z-index:99}.toast.on{opacity:1}
+footer{color:var(--muted);font-size:.88rem;padding:0 0 30px}footer a{color:var(--muted)}
+/* wall display */
+body.wall{background:#0F1726;color:#fff;overflow:hidden}body.wall header,body.wall main,body.wall footer{display:none}
+#wall{display:none}body.wall #wall{display:grid;grid-template-rows:auto auto 1fr auto;height:100vh;height:100dvh;padding:3vh 3vw;gap:2.4vh}
+.wh{display:flex;align-items:center;gap:1.4vw}.wh img{height:5vh}.wh b{font-size:3.4vh}.wh .clk{margin-left:auto;font-size:4vh;font-weight:700;font-variant-numeric:tabular-nums}
+.wc{display:grid;grid-template-columns:repeat(4,1fr);gap:1.6vw}.wc div{border-radius:1.6vh;padding:2vh 1.6vw;background:#1A2438}.wc b{display:block;font-size:7vh;line-height:1}.wc span{font-size:2.2vh;color:#AFC0D6}
+.wc .c-ok b{color:#48BB78}.wc .c-issue b{color:#ECC94B}.wc .c-down b{color:#FC8181}.wc .c-repair b{color:#63B3ED}
+.wl{display:grid;grid-template-columns:repeat(auto-fill,minmax(36vh,1fr));gap:1.6vh;align-content:start;overflow:hidden}
+.wi{background:#1A2438;border-radius:1.4vh;padding:1.8vh 1.4vw;border-left:1vh solid #ECC94B}.wi.down{border-left-color:#FC8181}.wi.repair{border-left-color:#63B3ED}
+.wi b{font-size:3vh;display:block;line-height:1.15}.wi span{font-size:2.3vh;color:#C8D3E2}.wi p{margin:.6vh 0 0;font-size:2vh;color:#AFC0D6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.allgood{display:grid;place-items:center;font-size:5vh;color:#48BB78;font-weight:700;text-align:center}
+.wf{color:#7D8CA3;font-size:1.8vh;display:flex;justify-content:space-between}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="in"><img src="assets/logo-mark-white.png" alt="Davis Tech Support"><h1><span id="schoolT">Room Tech Status</span><span class="sub">Classroom tech, room by room</span></h1><span class="sp"></span>
+ <button class="btn p" id="rep" type="button">Report a problem</button><button class="btn" id="adm" type="button">Admin</button></div></header>
+<main><div class="in">
+ <div id="notes"></div>
+ <div class="sum" id="sum"></div>
+ <div class="tools"><label class="sr" for="q" hidden>Search</label><input type="search" id="q" placeholder="Search rooms or devices" aria-label="Search rooms or devices"><select id="area" aria-label="Area"></select><span class="upd" id="upd"></span></div>
+ <div class="lay"><div id="rooms"></div><aside class="side"><h2 id="repH">Open reports</h2><div id="reps"></div></aside></div>
+</div></main>
+<footer><div class="in">Made by <a href="https://davis-tech-support.com" target="_blank" rel="noopener">Davis Tech Support</a> · <a href="?display">Wall display</a></div></footer>
+<div id="wall"><div class="wh"><img src="assets/logo-mark-white.png" alt=""><b id="wSchool">Room Tech Status</b><span class="clk" id="wClk"></span></div><div class="wc" id="wCounts"></div><div class="wl" id="wList"></div><div class="wf"><span id="wUpd"></span><span>Report problems at <b id="wUrl"></b></span></div></div>
+<dialog id="dRep"><form class="dlg" method="dialog" id="fRep"><h2>Report a problem</h2><p class="hint" style="color:var(--muted);margin:0">Your tech person will see it on the board right away.</p>
+ <label for="rRoom">Room</label><select id="rRoom" required></select>
+ <label for="rDev">What isn't working?</label><select id="rDev" required></select>
+ <label>How bad is it?</label><div class="sev"><label><input type="radio" name="sev" value="down" checked><span>Not working at all<small>Can't use it</small></span></label><label><input type="radio" name="sev" value="issue"><span>Has a problem<small>Usable, but something's wrong</small></span></label></div>
+ <label for="rText">What's happening?</label><textarea id="rText" maxlength="400" required placeholder="Projector turns on but shows “No signal” from my laptop."></textarea>
+ <label for="rBy">Your name</label><input id="rBy" maxlength="60" autocomplete="name">
+ <div class="err" id="rErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn p" id="rSend" value="send">Send report</button></div></form></dialog>
+<dialog id="dPin"><form class="dlg" method="dialog" id="fPin"><h2 id="pinH">Admin sign-in</h2><p id="pinP" style="color:var(--muted);margin:0">Enter the admin PIN to manage rooms and reports.</p>
+ <label for="pin" id="pinL">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
+ <div class="err" id="pErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn dk" value="ok">Sign in</button></div></form></dialog>
+<dialog id="dRoom"><form class="dlg" method="dialog" id="fRoom"><h2 id="roomH">Add a room</h2>
+ <label for="roName">Room name or number</label><input id="roName" maxlength="60" required placeholder="Room 112">
+ <label for="roArea">Building or hallway (optional)</label><input id="roArea" maxlength="60" placeholder="Upper School" list="areas"><datalist id="areas"></datalist>
+ <div id="roTypesW"><label>Devices in this room</label><div class="types" id="roTypes"></div></div>
+ <div class="err" id="roErr"></div><div class="foot"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn dk" value="ok">Save</button></div></form></dialog>
+<dialog id="dDev"><form class="dlg" method="dialog" id="fDev"><h2 id="devH"></h2><p id="devP" style="color:var(--muted);margin:0"></p>
+ <div id="devAdmin"><label>Status</label><div class="sev" id="devSt"></div><label for="devNote">Note for staff (optional)</label><input id="devNote" maxlength="400" placeholder="New bulb ordered, back Friday"></div>
+ <div class="foot"><button class="btn" value="cancel" formnovalidate>Close</button><button class="btn p" type="button" id="devRep">Report a problem</button><button class="btn dk" value="ok" id="devSave">Save</button></div></form></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2000)};
+const get=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const LBL={ok:"Working",issue:"Has a problem",down:"Not working",repair:"Being fixed"},RANK={down:3,issue:2,repair:1,ok:0};
+const API="api/board";let B=null,TYPES=[],pin=sessionStorage.getItem("rsb.pin")||"",code=get("rsb.code",""),filt=get("rsb.filt",{st:"",area:""}),lastOk=0;
+const WALL=new URLSearchParams(location.search).has("display");if(WALL)document.body.classList.add("wall");
+const ago=t=>{const s=(Date.now()-t)/1000;if(s<60)return"just now";if(s<3600)return Math.floor(s/60)+" min ago";if(s<86400)return Math.floor(s/3600)+" hr ago";return new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"})};
+async function call(method,body){if(location.protocol==="file:")throw{kind:"local"};const h={"content-type":"application/json"};if(code)h["x-staff-code"]=code;if(pin&&method==="GET")h["x-admin-pin"]=pin;
+ let r;try{r=await fetch(API,{method,headers:h,body:body?JSON.stringify(body):undefined,cache:"no-store"})}catch(e){throw{kind:"net"}}
+ const ct=r.headers.get("content-type")||"";if(!ct.includes("json"))throw{kind:"nofn"};const j=await r.json();if(!r.ok)throw{kind:j.error,msg:j.message||j.error,need:j.needCode};return j}
+function note(html,bad){$("#notes").innerHTML=html?`<div class="note${bad?" bad":""}">${html}</div>`:""}
+async function load(quiet){try{const j=await call("GET");B=j.board;TYPES=j.types;lastOk=Date.now();note("");render()}
+ catch(e){if(e.kind==="code"){askCode();return}
+  if(e.kind==="setup")note("<b>Almost ready.</b> Add an <code>ADMIN_PIN</code> environment variable in Netlify (Site configuration > Environment variables), then redeploy. See the README.",true);
+  else if(e.kind==="local"||e.kind==="nofn")note("<b>This board needs its Netlify server function.</b> Deploy this folder to Netlify (see the README). Opening the file from your computer can't save anything.",true);
+  else if(!quiet||Date.now()-lastOk>90000)note(`<b>Can't reach the board right now.</b> ${B?"Showing what was last loaded. ":""}It will keep trying.`,true);
+  if(B)render()}}
+function askCode(){const d=$("#dPin");$("#pinH").textContent="Staff code";$("#pinP").textContent="Enter the staff code your school's tech person gave you. You only need to do this once on this device.";$("#pinL").textContent="Staff code";$("#pin").value="";$("#pin").inputMode="text";$("#pErr").textContent=code?"That code didn't work.":"";d.dataset.mode="code";if(!d.open)d.showModal()}
+function devStatus(r){return r.devices.reduce((w,d)=>RANK[d.status]>RANK[w]?d.status:w,"ok")}
+function render(){if(!B)return;if(WALL)return wall();const admin=!!pin;$("#adm").textContent=admin?"Sign out":"Admin";
+ $("#schoolT").textContent=B.school||"Room Tech Status";document.title=(B.school?B.school+" · ":"")+"Room Tech Status";
+ const all=B.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const cnt=k=>all.filter(x=>x.d.status===k).length;
+ $("#sum").innerHTML=[["","All",all.length],["down","Not working",cnt("down")],["issue","Has a problem",cnt("issue")],["repair","Being fixed",cnt("repair")],["ok","Working",cnt("ok")]].map(([k,n,c])=>`<button type="button" class="chip" data-st="${k}" aria-pressed="${filt.st===k}">${k?`<span class="dot d-${k}"></span>`:""}${n} <b>${c}</b></button>`).join("");
+ $$("#sum .chip").forEach(b=>b.onclick=()=>{filt.st=b.dataset.st;set("rsb.filt",filt);render()});
+ const areas=[...new Set(B.rooms.map(r=>r.area||""))];$("#area").innerHTML=`<option value="">All areas</option>`+areas.filter(Boolean).map(a=>`<option>${esc(a)}</option>`).join("");$("#area").value=filt.area;$("#area").hidden=areas.filter(Boolean).length<1;
+ $("#areas").innerHTML=areas.filter(Boolean).map(a=>`<option value="${esc(a)}">`).join("");
+ const q=$("#q").value.trim().toLowerCase();
+ const show=B.rooms.filter(r=>(!filt.area||r.area===filt.area)).map(r=>({r,devs:r.devices.filter(d=>(!filt.st||d.status===filt.st)&&(!q||(r.name+" "+(r.area||"")+" "+d.type+" "+(d.name||"")).toLowerCase().includes(q)))})).filter(x=>x.devs.length||(admin&&!filt.st&&(!q||x.r.name.toLowerCase().includes(q))));
+ const groups={};show.forEach(x=>(groups[x.r.area||""]=groups[x.r.area||""]||[]).push(x));
+ $("#rooms").innerHTML=(admin?`<div class="tools"><button class="btn dk" id="addRoom" type="button">Add a room</button><button class="btn" id="setSchool" type="button">Set school name</button></div>`:"")+
+  (B.rooms.length?(show.length?Object.entries(groups).map(([a,list])=>`<section class="area">${a||Object.keys(groups).length>1?`<h2>${esc(a||"Other rooms")}</h2>`:""}<div class="rooms">${list.map(({r,devs})=>`<article class="room st-${devStatus(r)}"><h3>${esc(r.name)}<span>${r.devices.length} device${r.devices.length===1?"":"s"}</span></h3>
+   ${devs.map(d=>`<button class="dv" type="button" data-r="${r.id}" data-d="${d.id}"><span class="dot d-${d.status}"></span><span class="nm">${esc(d.name||d.type)}${d.name?`<small>${esc(d.type)}</small>`:d.note?`<small>${esc(d.note)}</small>`:""}</span><span class="tg t-${d.status}">${LBL[d.status]}</span></button>`).join("")||`<p style="color:var(--muted);margin:4px 0">No devices yet.</p>`}
+   ${admin?`<div class="ad"><button class="btn sm" type="button" data-adddev="${r.id}">Add device</button><button class="btn sm" type="button" data-edit="${r.id}">Edit</button><button class="btn sm" type="button" data-del="${r.id}">Delete</button></div>`:""}</article>`).join("")}</div></section>`).join(""):`<div class="empty">Nothing matches.</div>`)
+  :`<div class="empty">${admin?"No rooms yet. Press <b>Add a room</b> to start.":"No rooms have been set up yet. Your tech person can add them by signing in as Admin."}</div>`);
+ $$(".dv").forEach(b=>b.onclick=()=>devDlg(b.dataset.r,b.dataset.d));
+ if(admin){$("#addRoom").onclick=()=>roomDlg();$("#setSchool").onclick=async()=>{const n=prompt("School name shown at the top:",B.school||"");if(n!=null)await act({action:"school",school:n})};
+  $$("[data-adddev]").forEach(b=>b.onclick=async()=>{const t=prompt("Device type: "+TYPES.join(", "),"Projector");if(!t)return;const type=TYPES.find(x=>x.toLowerCase()===t.trim().toLowerCase())||"Other";const n=prompt("Name or label (optional), like “Epson projector” or “Teacher laptop”:","")||"";await act({action:"addDevice",room:b.dataset.adddev,type,name:type==="Other"&&!n?t:n})});
+  $$("[data-edit]").forEach(b=>b.onclick=()=>roomDlg(B.rooms.find(r=>r.id===b.dataset.edit)));
+  $$("[data-del]").forEach(b=>b.onclick=async()=>{const r=B.rooms.find(x=>x.id===b.dataset.del);if(confirm(`Delete ${r.name} and its reports?`))await act({action:"delRoom",room:r.id})})}
+ reports();$("#upd").textContent=lastOk?`Updated ${new Date(lastOk).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}`:""}
+function where(rp){const r=B.rooms.find(x=>x.id===rp.room),d=r&&r.devices.find(x=>x.id===rp.device);return{r,d,label:r?`${r.name} · ${d?(d.name||d.type):"device removed"}`:"Room removed"}}
+function reports(){const admin=!!pin;const open=B.reports.filter(r=>r.state!=="fixed"),done=B.reports.filter(r=>r.state==="fixed").slice(0,8);
+ $("#repH").textContent=`Open reports (${open.length})`;
+ const one=rp=>{const w=where(rp);return`<div class="rp"><div class="w"><span class="dot d-${rp.state==="progress"?"repair":rp.state==="fixed"?"ok":rp.severity}"></span> ${esc(w.label)}</div><div class="meta">${rp.state==="progress"?"Being fixed · ":rp.state==="fixed"?"Fixed · ":rp.severity==="down"?"Not working · ":"Has a problem · "}${esc(rp.by||"Someone")}, ${ago(rp.opened)}</div><p>${esc(rp.text)}</p>${rp.reply?`<div class="reply"><b>Tech reply:</b> ${esc(rp.reply)}</div>`:""}
+  ${admin?`<div class="act">${rp.state!=="progress"&&rp.state!=="fixed"?`<button class="btn sm" data-rs="${rp.id}" data-s="progress">Working on it</button>`:""}${rp.state!=="fixed"?`<button class="btn sm dk" data-rs="${rp.id}" data-s="fixed">Mark fixed</button>`:`<button class="btn sm" data-rs="${rp.id}" data-s="open">Reopen</button>`}<button class="btn sm" data-reply="${rp.id}">Reply</button></div>`:""}</div>`};
+ $("#reps").innerHTML=(open.length?open.map(one).join(""):`<p style="color:var(--muted)">No open reports. Everything reported has been handled.</p>`)+(done.length?`<h2 style="margin-top:18px">Recently fixed</h2>`+done.map(one).join(""):"");
+ $$("[data-rs]").forEach(b=>b.onclick=()=>act({action:"report-state",report:b.dataset.rs,state:b.dataset.s}));
+ $$("[data-reply]").forEach(b=>b.onclick=async()=>{const rp=B.reports.find(x=>x.id===b.dataset.reply);const t=prompt("Reply that staff will see:",rp.reply||"");if(t!=null)await act({action:"report-state",report:rp.id,state:rp.state,reply:t})})}
+async function act(body){try{const j=await call("POST",{...body,pin});B=j.board;lastOk=Date.now();render();return j}catch(e){if(e.kind==="pin"){pin="";sessionStorage.removeItem("rsb.pin");render();toast("Signed out. Sign in again.")}else if(e.kind==="code")askCode();else toast(e.msg||"Couldn't save. Check your connection.");throw e}}
+/* dialogs */
+function fillRooms(sel,roomId){sel.innerHTML=B.rooms.map(r=>`<option value="${r.id}">${esc(r.area?r.area+" · ":"")}${esc(r.name)}</option>`).join("");if(roomId)sel.value=roomId}
+function fillDevs(roomId,devId){const r=B.rooms.find(x=>x.id===roomId);$("#rDev").innerHTML=(r?r.devices:[]).map(d=>`<option value="${d.id}">${esc(d.name||d.type)}${d.status!=="ok"?" ("+LBL[d.status].toLowerCase()+")":""}</option>`).join("");if(devId)$("#rDev").value=devId}
+function repDlg(roomId,devId){if(!B||!B.rooms.length){toast("No rooms are set up yet.");return}fillRooms($("#rRoom"),roomId||get("rsb.lastRoom",""));if(!$("#rRoom").value)$("#rRoom").selectedIndex=0;fillDevs($("#rRoom").value,devId);
+ $("#rText").value="";$("#rBy").value=get("rsb.name","");$("#rErr").textContent="";$("#dRep").showModal();setTimeout(()=>(devId?$("#rText"):$("#rDev")).focus(),50)}
+$("#rRoom").onchange=()=>fillDevs($("#rRoom").value);
+$("#fRep").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="send")return;e.preventDefault();const text=$("#rText").value.trim();if(!text){$("#rErr").textContent="Describe what's happening.";return}
+ $("#rSend").disabled=true;try{await call("POST",{action:"report",room:$("#rRoom").value,device:$("#rDev").value,severity:document.querySelector('[name=sev]:checked').value,text,by:$("#rBy").value.trim(),pin});
+  set("rsb.name",$("#rBy").value.trim());set("rsb.lastRoom",$("#rRoom").value);$("#dRep").close();toast("Report sent. Thanks!");load()}
+ catch(err){if(err.kind==="code"){$("#dRep").close();askCode()}else $("#rErr").textContent=err.msg||"Couldn't send. Check your connection and try again."}$("#rSend").disabled=false});
+function roomDlg(r){$("#roomH").textContent=r?"Edit room":"Add a room";$("#roName").value=r?r.name:"";$("#roArea").value=r?r.area||"":filt.area||"";$("#roTypesW").hidden=!!r;
+ $("#roTypes").innerHTML=TYPES.map(t=>`<label><input type="checkbox" value="${esc(t)}" ${["Projector","Computer"].includes(t)?"checked":""}> ${esc(t)}</label>`).join("");$("#roErr").textContent="";$("#dRoom").dataset.id=r?r.id:"";$("#dRoom").showModal()}
+$("#fRoom").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="ok")return;e.preventDefault();const id=$("#dRoom").dataset.id,name=$("#roName").value.trim();if(!name){$("#roErr").textContent="Name the room.";return}
+ try{if(id)await act({action:"editRoom",room:id,name,area:$("#roArea").value.trim()});else await act({action:"addRoom",name,area:$("#roArea").value.trim(),devices:$$("#roTypes input:checked").map(i=>i.value)});$("#dRoom").close()}catch(err){$("#roErr").textContent=err.msg||"Couldn't save."}});
+function devDlg(rid,did){const r=B.rooms.find(x=>x.id===rid),d=r&&r.devices.find(x=>x.id===did);if(!d)return;const admin=!!pin;
+ $("#devH").textContent=`${r.name} · ${d.name||d.type}`;
+ const open=B.reports.filter(x=>x.room===rid&&x.device===did&&x.state!=="fixed");
+ $("#devP").innerHTML=`<span class="tg t-${d.status}" style="font-weight:700;padding:2px 8px;border-radius:99px;font-size:.8rem">${LBL[d.status]}</span>${d.note?` ${esc(d.note)}`:""}${open.length?`<br>${open.length} open report${open.length>1?"s":""}: ${esc(open[0].text)}`:""}`;
+ $("#devAdmin").hidden=!admin;$("#devSave").hidden=!admin;
+ if(admin){$("#devSt").innerHTML=Object.entries(LBL).map(([k,n])=>`<label><input type="radio" name="dst" value="${k}" ${d.status===k?"checked":""}><span><span class="dot d-${k}"></span> ${n}</span></label>`).join("")+`<label><input type="radio" name="dst" value="__del"><span>Remove this device</span></label>`;$("#devNote").value=d.note||""}
+ $("#devRep").onclick=()=>{$("#dDev").close();repDlg(rid,did)};$("#dDev").dataset.r=rid;$("#dDev").dataset.d=did;$("#dDev").showModal()}
+$("#fDev").addEventListener("submit",async e=>{if(!e.submitter||e.submitter.value!=="ok")return;e.preventDefault();const rid=$("#dDev").dataset.r,did=$("#dDev").dataset.d,v=document.querySelector("[name=dst]:checked")?.value;
+ try{if(v==="__del"){if(!confirm("Remove this device and its reports?"))return;await act({action:"delDevice",room:rid,device:did})}else await act({action:"setStatus",room:rid,device:did,status:v,note:$("#devNote").value});$("#dDev").close()}catch(err){}});
+$("#fPin").addEventListener("submit",async e=>{if(e.submitter&&e.submitter.value!=="ok")return;e.preventDefault();const v=$("#pin").value.trim();if(!v)return;
+ if($("#dPin").dataset.mode==="code"){code=v;set("rsb.code",code);$("#dPin").close();load();return}
+ try{await call("POST",{action:"login",pin:v});pin=v;sessionStorage.setItem("rsb.pin",pin);$("#dPin").close();toast("Signed in as admin");render()}catch(err){$("#pErr").textContent=err.msg||"Couldn't sign in."}});
+$("#adm").onclick=()=>{if(pin){pin="";sessionStorage.removeItem("rsb.pin");render();toast("Signed out");return}const d=$("#dPin");d.dataset.mode="pin";$("#pinH").textContent="Admin sign-in";$("#pinP").textContent="Enter the admin PIN to manage rooms and reports.";$("#pinL").textContent="PIN";$("#pin").value="";$("#pin").inputMode="numeric";$("#pErr").textContent="";d.showModal()};
+$("#rep").onclick=()=>repDlg();$("#q").addEventListener("input",render);$("#area").onchange=e=>{filt.area=e.target.value;set("rsb.filt",filt);render()};
+/* wall display */
+function wall(){$("#wSchool").textContent=B.school||"Room Tech Status";$("#wUrl").textContent=location.host+location.pathname.replace(/index\.html$/,"");
+ const all=B.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;
+ $("#wCounts").innerHTML=[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<div class="c-${k}"><b>${c(k)}</b><span>${n}</span></div>`).join("");
+ const bad=all.filter(x=>x.d.status!=="ok").sort((a,b)=>RANK[b.d.status]-RANK[a.d.status]);
+ $("#wList").innerHTML=bad.length?bad.map(({r,d})=>{const rp=B.reports.find(x=>x.room===r.id&&x.device===d.id&&x.state!=="fixed");return`<div class="wi ${d.status}"><b>${esc(r.name)}</b><span>${esc(d.name||d.type)} · ${LBL[d.status]}</span>${rp||d.note?`<p>${esc(d.note||rp.text)}</p>`:""}</div>`}).join(""):`<div class="allgood" style="grid-column:1/-1">✓ All classroom tech is working</div>`;
+ $("#wUpd").textContent=lastOk?`Updated ${new Date(lastOk).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}`:""}
+if(WALL)setInterval(()=>{$("#wClk").textContent=new Date().toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})},1000);
+load();setInterval(()=>{if(!document.hidden&&!document.querySelector("dialog[open]"))load(true)},20000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)load(true)});
+if("serviceWorker" in navigator&&location.protocol==="https:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+})();
+</script>
+</body>
+</html>

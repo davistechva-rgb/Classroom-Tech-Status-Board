@@ -1,0 +1,22 @@
+# No build step: this folder is the site.
+[build]
+  publish = "."
+  command = ""
+
+[build.environment]
+  # The storage library needs Node 22 or newer.
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

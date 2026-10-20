@@ -1,0 +1,9 @@
+{
+  "name": "room-status-board",
+  "private": true,
+  "type": "module",
+  "description": "Room Tech Status Board by Davis Tech Support",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.5"
+  }
+}
