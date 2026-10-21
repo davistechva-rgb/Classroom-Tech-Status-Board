@@ -124,8 +124,8 @@ function recompute(b) {
 function boardFor(b, u) {
   const cutoff = Date.now() - 45 * DAY;
   let tickets = b.tickets.filter(t => t.state !== "fixed" || (t.closed || 0) > cutoff), rooms = b.rooms;
-  // Teachers only see the rooms assigned to them (and tickets they wrote). Admins and techs see everything.
-  if (u && u.role === "teacher") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
+  // Everyone except admins only sees the rooms assigned to them (and tickets they wrote). Admins see everything.
+  if (u && u.role !== "admin") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
   return { ...b, rooms, tickets: tickets.map(t => ({ ...t, unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
 }
 async function log(by, text) { await mutate("log", () => ({ list: [] }), l => { l.list.unshift({ ts: Date.now(), by, text: clean(text, 300) }); l.list = l.list.slice(0, L.log); }); }
@@ -211,7 +211,7 @@ async function handle(req) {
     const b = upgrade(await read("board", blankBoard));
     const users = await read("users", () => ({ list: [] }));
     let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
-    if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
+    if (me.role !== "admin") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role === "admin" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
     const out = { me: publicUser(me), board: boardFor(b, me), people, types: TYPES };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     if (me.role === "admin") { out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
@@ -273,12 +273,14 @@ async function handle(req) {
     const dev = (r, d) => (room(r)?.devices || []).find(x => x.id === d);
     const tk = t => b.tickets.find(x => x.id === t);
     const need = ok => { if (!ok) throw new HttpError(403, "Your account can't do that."); };
+    const mine = rid => me.role === "admin" || (me.rooms || []).includes(rid);
+    const needRoom = rid => { if (!mine(rid)) throw new HttpError(403, "That room isn't assigned to your account."); };
     const devFields = (d, src) => { for (const k of ["name", "model", "serial", "asset", "location"]) if (src[k] != null) d[k] = line(src[k], L.field); if (src.notes != null) d.notes = clean(src.notes, L.text); if (src.type != null && TYPES.includes(src.type)) d.type = src.type; };
     switch (a) {
       case "report": {
         const r = room(body.room), d = dev(body.room, body.device);
         if (!r || !d) throw new HttpError(400, "That room or device no longer exists. Refresh and try again.");
-        if (me.role === "teacher" && !(me.rooms || []).includes(r.id)) throw new HttpError(403, "You can only report problems in your own room.");
+        if (!mine(r.id)) throw new HttpError(403, "You can only report problems in rooms assigned to you.");
         const text = clean(body.text, L.text); if (!text) throw new HttpError(400, "Describe the problem.");
         if (b.tickets.length >= L.tickets) b.tickets = b.tickets.filter(t => t.state !== "fixed" || t.closed > Date.now() - 90 * DAY);
         const t = { id: id(), room: r.id, device: d.id, text, by: me.username, byName: me.name, severity: body.severity === "down" ? "down" : "issue", state: "open", opened: Date.now(), updated: Date.now(), comments: [], seen: { [me.username]: Date.now() } };
@@ -286,7 +288,7 @@ async function handle(req) {
       }
       case "comment": {
         const t = tk(body.ticket); if (!t) throw new HttpError(400, "That ticket no longer exists.");
-        need(manage || t.by === me.username || (me.rooms || []).includes(t.room));
+        need(t.by === me.username || mine(t.room));
         const text = clean(body.text, L.text); if (!text) throw new HttpError(400, "Write a message first.");
         t.comments = (t.comments || []).concat({ by: me.username, byName: me.name, role: me.role, text, ts: Date.now() }).slice(-L.comments);
         t.updated = Date.now(); t.seen = { ...(t.seen || {}), [me.username]: Date.now() };
@@ -297,7 +299,7 @@ async function handle(req) {
       case "ticketState": {
         const t = tk(body.ticket); if (!t) throw new HttpError(400, "That ticket no longer exists.");
         const own = t.by === me.username;
-        need(manage || (own && body.state === "fixed"));
+        need((manage && mine(t.room)) || (own && body.state === "fixed"));
         if (!TICKET_STATES.includes(body.state)) throw new HttpError(400, "Unknown status.");
         const label = { open: "Open", progress: "Working on it", waiting: "Waiting on parts", fixed: "Fixed" }[body.state];
         t.state = body.state; t.updated = Date.now(); t.closed = body.state === "fixed" ? Date.now() : null;
@@ -306,30 +308,30 @@ async function handle(req) {
         if (t.state === "fixed") { const d = dev(t.room, t.device); if (d) d.manual = false; }
         note = `Marked a ticket ${label.toLowerCase()} (${room(t.room)?.name || ""})`; break;
       }
-      case "assign": { need(manage); const t = tk(body.ticket); if (!t) break; t.assignee = normUser(body.assignee) || null; t.updated = Date.now(); note = "Changed who's handling a ticket"; break; }
+      case "assign": { need(manage); const t = tk(body.ticket); if (!t) break; needRoom(t.room); t.assignee = normUser(body.assignee) || null; t.updated = Date.now(); note = "Changed who's handling a ticket"; break; }
       case "school": need(me.role === "admin"); b.school = line(body.school, L.name); note = "Changed the school name"; break;
       case "addRoom": {
-        need(manage); if (b.rooms.length >= L.rooms) throw new HttpError(400, "Room limit reached.");
+        need(me.role === "admin"); if (b.rooms.length >= L.rooms) throw new HttpError(400, "Room limit reached.");
         const name = line(body.name, L.name); if (!name) throw new HttpError(400, "Name the room.");
         const types = Array.isArray(body.devices) ? body.devices.slice(0, L.devices) : [];
         const r = { id: id(), name, area: line(body.area, L.name), devices: types.map(t => ({ id: id(), type: TYPES.includes(t) ? t : "Other", name: "", status: "ok" })) };
         b.rooms.push(r); result.room = r.id; note = `Added the room ${name}`; break;
       }
-      case "editRoom": { need(manage); const r = room(body.room); if (!r) break; if (body.name != null) r.name = line(body.name, L.name) || r.name; if (body.area != null) r.area = line(body.area, L.name); note = `Edited the room ${r.name}`; break; }
-      case "delRoom": { need(manage); const r = room(body.room); b.rooms = b.rooms.filter(x => x.id !== body.room); b.tickets = b.tickets.filter(x => x.room !== body.room); note = `Deleted the room ${r ? r.name : ""}`; break; }
+      case "editRoom": { need(manage); needRoom(body.room); const r = room(body.room); if (!r) break; if (body.name != null) r.name = line(body.name, L.name) || r.name; if (body.area != null) r.area = line(body.area, L.name); note = `Edited the room ${r.name}`; break; }
+      case "delRoom": { need(me.role === "admin"); const r = room(body.room); b.rooms = b.rooms.filter(x => x.id !== body.room); b.tickets = b.tickets.filter(x => x.room !== body.room); note = `Deleted the room ${r ? r.name : ""}`; break; }
       case "addDevice": {
-        need(manage); const r = room(body.room); if (!r) throw new HttpError(400, "That room no longer exists.");
+        need(manage); needRoom(body.room); const r = room(body.room); if (!r) throw new HttpError(400, "That room no longer exists.");
         if (r.devices.length >= L.devices) throw new HttpError(400, "That room has the most devices allowed.");
         const d = { id: id(), type: TYPES.includes(body.type) ? body.type : "Other", name: "", status: "ok" }; devFields(d, body); r.devices.push(d); result.device = d.id; note = `Added ${d.name || d.type} to ${r.name}`; break;
       }
       case "editDevice": {
-        need(manage); const d = dev(body.room, body.device); if (!d) throw new HttpError(400, "That device no longer exists.");
+        need(manage); needRoom(body.room); if (body.moveTo) needRoom(body.moveTo); const d = dev(body.room, body.device); if (!d) throw new HttpError(400, "That device no longer exists.");
         devFields(d, body);
         if (body.status != null) { if (!DEV_STATUS.includes(body.status)) throw new HttpError(400, "Unknown status."); d.status = body.status; d.manual = true; d.statusNote = clean(body.statusNote, L.field * 2); }
         if (body.moveTo && body.moveTo !== body.room) { const from = room(body.room), to = room(body.moveTo); if (to) { from.devices = from.devices.filter(x => x !== d); to.devices.push(d); b.tickets.forEach(t => { if (t.device === d.id) t.room = to.id; }); } }
         note = `Updated ${d.name || d.type} in ${room(body.moveTo || body.room)?.name || ""}`; break;
       }
-      case "delDevice": { need(manage); const r = room(body.room); if (!r) break; const d = r.devices.find(x => x.id === body.device); r.devices = r.devices.filter(x => x.id !== body.device); b.tickets = b.tickets.filter(x => x.device !== body.device); note = `Removed ${d ? d.name || d.type : "a device"} from ${r.name}`; break; }
+      case "delDevice": { need(manage); needRoom(body.room); const r = room(body.room); if (!r) break; const d = r.devices.find(x => x.id === body.device); r.devices = r.devices.filter(x => x.id !== body.device); b.tickets = b.tickets.filter(x => x.device !== body.device); note = `Removed ${d ? d.name || d.type : "a device"} from ${r.name}`; break; }
       default: throw new HttpError(400, "Unknown action.");
     }
     recompute(b); b.updated = Date.now();
