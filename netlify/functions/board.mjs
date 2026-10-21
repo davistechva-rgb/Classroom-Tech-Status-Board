@@ -103,8 +103,8 @@ async function sendMail(to, subject, body) {
     const graph = process.env.MS_GRAPH_HOST || "https://graph.microsoft.com";
     const send = async () => fetch(`${graph}/v1.0/users/${encodeURIComponent(process.env.MAIL_FROM)}/sendMail`, { method: "POST", headers: { authorization: "Bearer " + await msToken(), "content-type": "application/json" },
       body: JSON.stringify({ message: { subject, body: { contentType: "HTML", content: body.html }, toRecipients: [{ emailAddress: { address: to } }], from: { emailAddress: { address: process.env.MAIL_FROM, name } } }, saveToSentItems: false }) });
-    let r = await send(); if (r.status === 401) { _ms = null; r = await send(); }
-    if (!r.ok) { const t = await r.text(); let m = t; try { m = JSON.parse(t).error.message; } catch {} throw new Error(`Microsoft 365 said ${r.status}: ${String(m).slice(0, 220)}`); }
+    let r = await send(); if (r.status === 401 || r.status === 403) { _ms = null; r = await send(); }
+    if (!r.ok) { const t = await r.text(); let m = t; try { m = JSON.parse(t).error.message; } catch {} throw new Error(`Microsoft 365 said ${r.status}: ${String(m).slice(0, 220)}${r.status === 403 ? " " + msHint() : ""}`); }
     return true;
   }
   if (process.env.RESEND_API_KEY) {
@@ -117,6 +117,14 @@ async function sendMail(to, subject, body) {
   await t.sendMail({ from: `"${name}" <${process.env.MAIL_FROM || process.env.SMTP_USER}>`, to, subject, text: body.text, html: body.html }); return true;
 }
 let _ms = null; // cached Microsoft Graph app token
+// Explains a 403 by reading which permissions are inside the app's token (the "roles" claim).
+function msHint() {
+  let roles = [];
+  try { roles = JSON.parse(Buffer.from(String(_lastTok || "").split(".")[1], "base64url")).roles || []; } catch {}
+  if (!roles.includes("Mail.Send")) return `(The app's sign-in has no Mail.Send application permission. It has: ${roles.join(", ") || "none"}. In Entra, add Mail.Send under "Application permissions", not "Delegated", then grant admin consent.)`;
+  return `(The app does have Mail.Send, so Exchange is blocking it from sending as ${process.env.MAIL_FROM}. Your tenant likely has an application access policy or an RBAC for Applications rule. Allow this app for that mailbox, or use a mailbox the policy allows.)`;
+}
+let _lastTok = "";
 async function msToken() {
   if (_ms && _ms.exp > Date.now() + 60000) return _ms.tok;
   const login = process.env.MS_LOGIN_HOST || "https://login.microsoftonline.com";
@@ -124,7 +132,7 @@ async function msToken() {
     body: new URLSearchParams({ client_id: process.env.MS_CLIENT_ID, client_secret: process.env.MS_CLIENT_SECRET, scope: "https://graph.microsoft.com/.default", grant_type: "client_credentials" }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error("Microsoft 365 sign-in failed: " + String(j.error_description || j.error || r.status).split("\r\n")[0].slice(0, 220));
-  _ms = { tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 }; return _ms.tok;
+  _ms = { tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 }; _lastTok = j.access_token; return _ms.tok;
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 async function mailMany(list) { const r = await Promise.allSettled(list.map(([to, sub, body]) => withTimeout(sendMail(to, sub, body), 9000))); r.forEach(x => { if (x.status === "rejected") console.error("email failed:", x.reason && x.reason.message); }); }
