@@ -3,7 +3,9 @@
 // Environment variables (Netlify > Site configuration > Environment variables):
 //   ADMIN_PIN  (required) used once to create the first admin account, and later to recover an admin password.
 //   Email alerts (optional, pick one):
-//     SMTP_USER + SMTP_PASS  a Gmail address and a Google app password (or set SMTP_HOST / SMTP_PORT for another provider)
+//     Microsoft 365: MS_TENANT_ID + MS_CLIENT_ID + MS_CLIENT_SECRET + MAIL_FROM (the mailbox alerts are sent from).
+//       Sends through Microsoft Graph with an Entra app that has the Mail.Send application permission.
+//     SMTP_USER + SMTP_PASS  for example a Gmail address and a Google app password (SMTP_HOST / SMTP_PORT for other providers)
 //     RESEND_API_KEY + MAIL_FROM  a Resend.com key and a verified sender address
 //   MAIL_NAME (optional) the sender name on alerts. Default: Room Tech Status
 //
@@ -81,7 +83,8 @@ const photoUrl = (sec, k) => `api/board?photo=${encodeURIComponent(k)}&s=${photo
 
 /* ---------- email alerts ---------- */
 const SITE = () => (process.env.URL || "").replace(/\/$/, "");
-export const mailReady = () => !!(process.env.RESEND_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS) || process.env.MAIL_TEST_DIR);
+const msReady = () => !!(process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET && process.env.MAIL_FROM);
+export const mailReady = () => !!(msReady() || process.env.RESEND_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS) || process.env.MAIL_TEST_DIR);
 const escH = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function emailBody(title, lines, link, linkText) {
   const text = [title, "", ...lines, "", link ? `${linkText || "Open the board"}: ${link}` : "", "", "Room Tech Status by Davis Tech Support. Change which emails you get under My settings on the board."].join("\n");
@@ -96,6 +99,14 @@ async function sendMail(to, subject, body) {
   if (!to || !mailReady()) return false;
   const name = process.env.MAIL_NAME || "Room Tech Status";
   if (process.env.MAIL_TEST_DIR) { const fs = await import("node:fs"); fs.mkdirSync(process.env.MAIL_TEST_DIR, { recursive: true }); fs.appendFileSync(process.env.MAIL_TEST_DIR + "/mail.jsonl", JSON.stringify({ to, subject, text: body.text }) + "\n"); return true; }
+  if (msReady()) {
+    const graph = process.env.MS_GRAPH_HOST || "https://graph.microsoft.com";
+    const send = async () => fetch(`${graph}/v1.0/users/${encodeURIComponent(process.env.MAIL_FROM)}/sendMail`, { method: "POST", headers: { authorization: "Bearer " + await msToken(), "content-type": "application/json" },
+      body: JSON.stringify({ message: { subject, body: { contentType: "HTML", content: body.html }, toRecipients: [{ emailAddress: { address: to } }], from: { emailAddress: { address: process.env.MAIL_FROM, name } } }, saveToSentItems: false }) });
+    let r = await send(); if (r.status === 401) { _ms = null; r = await send(); }
+    if (!r.ok) { const t = await r.text(); let m = t; try { m = JSON.parse(t).error.message; } catch {} throw new Error(`Microsoft 365 said ${r.status}: ${String(m).slice(0, 220)}`); }
+    return true;
+  }
   if (process.env.RESEND_API_KEY) {
     const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: "Bearer " + process.env.RESEND_API_KEY, "content-type": "application/json" },
       body: JSON.stringify({ from: `${name} <${process.env.MAIL_FROM || "onboarding@resend.dev"}>`, to: [to], subject, text: body.text, html: body.html }) });
@@ -104,6 +115,16 @@ async function sendMail(to, subject, body) {
   const nodemailer = (await import("nodemailer")).default; const port = +(process.env.SMTP_PORT || 465);
   const t = nodemailer.createTransport({ host: process.env.SMTP_HOST || "smtp.gmail.com", port, secure: port === 465, auth: { user: process.env.SMTP_USER, pass: String(process.env.SMTP_PASS).replace(/\s+/g, "") } });
   await t.sendMail({ from: `"${name}" <${process.env.MAIL_FROM || process.env.SMTP_USER}>`, to, subject, text: body.text, html: body.html }); return true;
+}
+let _ms = null; // cached Microsoft Graph app token
+async function msToken() {
+  if (_ms && _ms.exp > Date.now() + 60000) return _ms.tok;
+  const login = process.env.MS_LOGIN_HOST || "https://login.microsoftonline.com";
+  const r = await fetch(`${login}/${encodeURIComponent(process.env.MS_TENANT_ID)}/oauth2/v2.0/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: process.env.MS_CLIENT_ID, client_secret: process.env.MS_CLIENT_SECRET, scope: "https://graph.microsoft.com/.default", grant_type: "client_credentials" }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error("Microsoft 365 sign-in failed: " + String(j.error_description || j.error || r.status).split("\r\n")[0].slice(0, 220));
+  _ms = { tok: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 }; return _ms.tok;
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 async function mailMany(list) { const r = await Promise.allSettled(list.map(([to, sub, body]) => withTimeout(sendMail(to, sub, body), 9000))); r.forEach(x => { if (x.status === "rejected") console.error("email failed:", x.reason && x.reason.message); }); }
@@ -337,7 +358,7 @@ async function handle(req) {
     return json({ ok: true, user: publicUser(fresh) });
   }
   if (a === "testEmail") {
-    if (!mailReady()) throw new HttpError(400, "Email isn't set up yet. Add SMTP_USER and SMTP_PASS in Netlify, then redeploy.");
+    if (!mailReady()) throw new HttpError(400, "Email isn't set up yet. Add the Microsoft 365 settings in Netlify (see the README), then redeploy.");
     if (!me.email) throw new HttpError(400, "Add your email address first.");
     try { await withTimeout(sendMail(me.email, "Test email from Room Tech Status", emailBody("Email alerts are working ✅", [`This is a test sent to ${me.email}.`], SITE(), "Open the board")), 12000); }
     catch (e) { throw new HttpError(502, "The email didn't send: " + String(e.message || e).slice(0, 200)); }

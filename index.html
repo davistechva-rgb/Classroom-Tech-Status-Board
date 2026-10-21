@@ -349,7 +349,7 @@ function qrDlg(){const rs=S.board.rooms.slice().sort((a,b)=>a.name.localeCompare
   w.document.close();d.close()})}
 function settingsDlg(){const m=S.me,n=m.notify||{},staff=m.role!=="teacher";
  const d=dlg(`<form class="dlg" id="fSet" novalidate><h2>My settings</h2>
-  ${S.mail?"":`<div class="banner">Email alerts aren't turned on for this board yet. ${isAdmin()?"Add <b>SMTP_USER</b> and <b>SMTP_PASS</b> in Netlify (the README shows how), then redeploy.":"Your admin can turn them on."} You can still save your email now.</div>`}
+  ${S.mail?"":`<div class="banner">Email alerts aren't turned on for this board yet. ${isAdmin()?"Add the Microsoft 365 settings in Netlify (the README shows how), then redeploy.":"Your admin can turn them on."} You can still save your email now.</div>`}
   <label class="l" for="se">My email</label><input id="se" name="email" type="email" autocomplete="email" value="${esc(m.email||"")}" placeholder="name@school.org">
   <h3 style="margin:18px 0 6px;font-size:1rem">Email me when…</h3>
   ${staff?`<label class="l" for="sr" style="margin-top:4px">Someone reports a problem</label><select id="sr" name="reports"><option value="all" ${n.reports==="all"?"selected":""}>Every report</option><option value="down" ${n.reports==="down"?"selected":""}>Only when something is “Not working”</option><option value="none" ${n.reports==="none"?"selected":""}>Never</option></select>`:""}

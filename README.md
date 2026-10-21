@@ -28,13 +28,23 @@ The board stores its data with Netlify Blobs, Netlify's built-in storage, so it 
 4. Open the site. The first visit shows **Set up your board**: enter your ADMIN_PIN, then choose your own admin username and password.
 5. Add your rooms on the Board, then add your teachers on **People**.
 
-### Turn on email alerts (optional)
-The easiest way is a Gmail account, such as the one you use for tech support:
-1. Turn on 2-Step Verification for that Google account, then go to **myaccount.google.com/apppasswords** and create an app password named "Room Tech Status". Copy the 16 letters.
-2. In Netlify, under **Site configuration > Environment variables**, add `SMTP_USER` (the Gmail address) and `SMTP_PASS` (the app password).
-3. Redeploy. Then open **My settings** on the board, enter your email, and press **Send me a test email**.
+### Turn on email alerts with Microsoft 365 (optional)
+The board sends email through Microsoft Graph, the method Microsoft supports now that basic SMTP sign-in is retired in Exchange Online. You need a Microsoft 365 admin account for steps 1 to 4.
 
-To use another provider instead, also set `SMTP_HOST` and `SMTP_PORT`. To use Resend.com, set `RESEND_API_KEY` and `MAIL_FROM` instead of the SMTP settings. `MAIL_NAME` changes the sender name (the default is Room Tech Status).
+1. **Pick a mailbox to send from.** A shared mailbox works and needs no license, for example `techalerts@yourschool.org` (Exchange admin center > Recipients > Mailboxes > Add a shared mailbox).
+2. **Register the app.** Go to **entra.microsoft.com > Applications > App registrations > New registration**. Name it "Room Tech Status", keep "Accounts in this organizational directory only", and press **Register**. Copy the **Application (client) ID** and the **Directory (tenant) ID** from the Overview page.
+3. **Give it permission to send mail.** Open **API permissions > Add a permission > Microsoft Graph > Application permissions**, check **Mail.Send**, press **Add permissions**, then **Grant admin consent**.
+4. **Make a secret.** Open **Certificates & secrets > New client secret**, pick 24 months, and copy the **Value** right away (it is only shown once). Put a reminder on your calendar to renew it before it expires.
+5. **Add four settings in Netlify** under **Site configuration > Environment variables**:
+   - `MS_TENANT_ID`: the Directory (tenant) ID
+   - `MS_CLIENT_ID`: the Application (client) ID
+   - `MS_CLIENT_SECRET`: the secret Value
+   - `MAIL_FROM`: the mailbox from step 1
+6. **Redeploy.** On the board, open **My settings**, enter your email, and press **Send me a test email**. If something is wrong, the message tells you what Microsoft said.
+
+**Locking it down (recommended):** the Mail.Send application permission lets the app send as any mailbox in your organization. Only the board uses it, and the secret stays in Netlify. To limit it to just the alerts mailbox, use Exchange Online's *Role Based Access Control for Applications* (search for that name on Microsoft Learn) and scope the "Application Mail.Send" role to the alerts mailbox.
+
+**Other email services:** set `SMTP_USER` and `SMTP_PASS` (plus `SMTP_HOST` and `SMTP_PORT`) for a regular SMTP server, or `RESEND_API_KEY` and `MAIL_FROM` for Resend.com. `MAIL_NAME` changes the sender name (the default is Room Tech Status).
 
 The morning heads-up email runs every day at 7 AM Eastern from `netlify/functions/daily.mjs`. It only sends when something needs attention.
 
