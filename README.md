@@ -17,6 +17,9 @@ Made by [Davis Tech Support](https://davis-tech-support.com) in Farmville, Virgi
 - **Notices:** post planned outages ("Wi-Fi down in Upper School until 3:30") so everyone sees them before reporting.
 - **Warranty and lamp tracking:** add purchase dates, warranty end dates, and projector lamp hours. A morning email gives a heads-up 30 days before a warranty ends and when a lamp reaches 90%, and on Mondays it lists tickets open more than a week.
 - **Reports:** problems per month, average time to fix, the devices and rooms with the most problems, what's coming up, plus inventory and ticket spreadsheets for Excel or Google Sheets.
+- **Quick fixes:** when a teacher reports a problem, the form first shows a few steps to try for that kind of device ("Press Source on the remote"). If one works, they tap **That fixed it** and no ticket is made. Edit the steps from **Board → Quick fixes**. Reports counts how many problems teachers fixed themselves.
+- **Loaners:** list the Chromebooks, chargers, hotspots, and other things you lend out, check them out to staff or students with a due date, and check them back in (good, damaged, or missing parts). Overdue items stand out, show up in the morning email, and teachers see what they've borrowed on their own page.
+- **Walkthroughs:** a phone-friendly room-by-room checklist for summer or monthly checks. Tap ✓ or ✗ on each device, and every ✗ becomes a ticket automatically. Download the results as a spreadsheet.
 - **Wall display:** private links (made on the People page) show problems in big type with no sign-in and refresh every 20 seconds.
 - **Activity log**, search, and filtering by area or status.
 

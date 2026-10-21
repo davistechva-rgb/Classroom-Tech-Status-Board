@@ -193,6 +193,24 @@ details.upkeep{margin-top:16px;border:1px solid var(--line);border-radius:12px;p
 .gstat{display:flex;align-items:center;gap:12px;border:1px dashed var(--line);border-radius:12px;padding:10px 14px;margin:6px 0 4px}.gstat.on{border-style:solid;border-color:#C9DBFB;background:#F2F7FF}
 .gstat b{display:block;font-size:.95rem}.gstat span{color:var(--muted);font-size:.85rem}.gstat:not(.on) svg{filter:grayscale(1);opacity:.55}
 td.sin{min-width:150px}
+/* quick fixes */
+.qfix{margin-top:14px;border:1px solid #CFE3D6;background:#F1FAF4;border-radius:12px;padding:12px 14px}.qfix .qh{font-weight:700}.qfix .qh span{color:var(--muted);font-weight:500;font-size:.85rem}
+.qfix ol{margin:8px 0 10px;padding-left:22px}.qfix li{margin:4px 0}.qfix .qb{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn.green{background:var(--ok);border-color:var(--ok);color:#fff}
+/* loaners */
+.tag2{display:inline-block;font-size:.75rem;font-weight:700;border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-left:4px;color:var(--muted);vertical-align:1px}
+.li.ln-over{border-color:#F3B8B3;background:#FFF7F6}.li .btn{flex:none}
+.hrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:.9rem}
+/* walkthroughs */
+.wbar{display:block;height:6px;background:#E7ECF3;border-radius:99px;overflow:hidden;margin-top:6px;max-width:320px}.wbar i{display:block;height:100%;background:var(--ok)}.wbar.big{height:10px;max-width:none;margin:0 0 16px}
+.wrooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.wroom{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;color:inherit;text-decoration:none;box-shadow:var(--sh)}.wroom small{color:var(--muted);min-height:1em}.wroom span{font-weight:700;margin-top:4px}
+.wroom.done{border-color:#BFE5CF;background:#F1FAF4}.wroom.bad{border-color:#F3B8B3;background:#FFF7F6}
+.wdevs{display:grid;gap:10px}.wdev{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:var(--sh)}
+.wdev.ok{border-color:#BFE5CF}.wdev.bad{border-color:#F3B8B3;background:#FFF7F6}.wdev .wn{flex:1;min-width:0}.wdev .wn small{display:block;color:var(--muted)}
+.wbtns{display:flex;gap:8px}.wbtns button{width:56px;height:56px;border-radius:14px;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--muted)}.wbtns svg{width:26px;height:26px}
+.wok.on{background:var(--ok);border-color:var(--ok);color:#fff}.wbad.on{background:var(--down);border-color:var(--down);color:#fff}.wok:hover{border-color:var(--ok);color:var(--ok)}.wbad:hover{border-color:var(--down);color:var(--down)}
+.wok.on:hover,.wbad.on:hover{color:#fff}
 
 </style>
 </head>
@@ -384,6 +402,14 @@ function settingsDlg(){const m=S.me,n=m.notify||{},staff=m.role!=="teacher";
  const save=async fd=>{const j=await api("updateMe",{email:fd.get("email"),notify:{reports:fd.get("reports")||undefined,replies:!!fd.get("replies"),digest:staff?!!fd.get("digest"):undefined}});S.me=j.user;return j};
  bindForm($("#fSet"),async fd=>{await save(fd);toast("Settings saved");d.close()});
  if($("#sTest"))$("#sTest").onclick=async()=>{const b=$("#sTest"),er=$("#fSet .err");b.disabled=true;er.textContent="";try{await save(new FormData($("#fSet")));await api("testEmail");toast("Test email sent. Check your inbox.")}catch(e){er.textContent=e.msg}b.disabled=false}}
+function fixesDlg(type){type=type||S.types[0];const cur=(S.fixes||{})[type]||[];
+ const d=dlg(`<form class="dlg" id="fFx" novalidate><h2>Quick fixes</h2><p class="hint" style="margin-top:0">When a teacher reports a problem, these steps show first. If one works, they tap “That fixed it” and no ticket is made. The Reports page counts how many problems they fixed themselves.</p>
+  <label class="l">Device type</label><div class="typegrid">${S.types.map(t=>`<label><input type="radio" name="type" value="${esc(t)}" ${t===type?"checked":""}>${icon(t)}${esc(t)}</label>`).join("")}</div>
+  <label class="l" for="fxs">Steps for ${esc(type)} (one per line, up to 8)</label><textarea id="fxs" name="steps" style="min-height:150px" placeholder="Press Source on the remote…">${esc(cur.join("\n"))}</textarea>
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" id="fxReset" style="margin-right:auto">Use the built-in steps</button><button class="btn" type="button" data-close>Close</button><button class="btn dk" type="submit">Save</button></div></form>`,"wide");
+ $$('#fFx input[name=type]').forEach(r=>r.onchange=()=>fixesDlg(r.value));
+ bindForm($("#fFx"),async fd=>{const j=await api("setFixes",{type,steps:String(fd.get("steps")||"").split(/\n/).map(x=>x.trim()).filter(Boolean)});S.fixes=j.fixes;toast("Quick fixes saved")});
+ $("#fxReset").onclick=async()=>{const j=await api("setFixes",{type,reset:true});S.fixes=j.fixes;fixesDlg(type);toast("Back to the built-in steps")}}
 function noticeDlg(){const areas=[...new Set(S.board.rooms.map(x=>x.area).filter(Boolean))];const t=new Date();t.setHours(15,30,0,0);if(t<new Date())t.setDate(t.getDate()+1);
  const loc=x=>new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,16);
  const d=dlg(`<form class="dlg" id="fN" novalidate><h2>Post a notice</h2><p class="hint" style="margin-top:0">Shows at the top of everyone's board and on wall displays, so people know before they report it.</p>
@@ -410,13 +436,13 @@ async function start(){$("#auth").hidden=true;$("#app").hidden=false;
  let dl=null;try{dl=JSON.parse(sessionStorage.getItem("rsb.deep")||"null")}catch(e){}if(dl){sessionStorage.removeItem("rsb.deep");if(room(dl.r))reportDlg(dl.r,devOf(dl.r,dl.d)?dl.d:undefined);else toast("That room isn't on your board. Ask your admin if it should be.")}}
 function shell(){const m=S.me,cur=location.hash.split("/")[1]||"";const un=unreadCount();
  $("#sch").innerHTML=`${esc(S.board.school||"Room Tech Status")}<small>Classroom tech, room by room</small>`;
- const curT=S.me.role==="teacher"&&!cur?"my":cur;const tabs=[m.role==="teacher"?null:["","Board"],m.rooms.length||m.role==="teacher"?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isManager()?["reports","Reports"]:null,isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
+ const curT=S.me.role==="teacher"&&!cur?"my":cur;const tabs=[m.role==="teacher"?null:["","Board"],m.rooms.length||m.role==="teacher"?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isManager()?["loans","Loaners"]:null,isManager()?["walks","Walkthroughs"]:null,isManager()?["reports","Reports"]:null,isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
  $("#tabs").innerHTML=tabs.map(([k,n])=>`<a href="#/${k}" ${curT===k?'aria-current="page"':""}>${n}${k==="tickets"&&un?'<span class="dotn" aria-label="New replies"></span>':""}</a>`).join("");
  $("#meBtn").innerHTML=`<span class="av">${esc(initials(m.name))}</span>${esc(m.name.split(" ")[0])}`;
  if(typeof pwLabel==="function")pwLabel();$("#meWho").innerHTML=`<b>${esc(m.name)}</b>${esc(m.username)} · ${ROLE[m.role]}`;
  document.title=(S.board.school?S.board.school+" · ":"")+"Room Tech Status"}
 function route(){if(!S||!S.board)return;shell();const p=location.hash.replace(/^#\/?/,"").split("/");const v=$("#view");
- const views={"":boardView,my:myView,tickets:ticketsView,t:ticketView,people:peopleView,more:activityView,reports:reportsView};
+ const views={"":boardView,my:myView,tickets:ticketsView,t:ticketView,people:peopleView,more:activityView,reports:reportsView,loans:loansView,walks:walksView,walk:walkView};
  const nb=$("#notices");nb.innerHTML=noticesHtml(S.board.notices,isManager());$$("[data-delnote]",nb).forEach(b=>b.onclick=async()=>{if(confirm("Take this notice down?"))await act("delNotice",{id:b.dataset.delnote},"Notice removed")});
  (S.me.role==="teacher"&&!p[0]?myView:(views[p[0]]||boardView))(v,p.slice(1));window.scrollTo&&p[0]==="t"&&window.scrollTo(0,0)}
 addEventListener("hashchange",route);
@@ -438,14 +464,14 @@ function wireTiles(root){$$(".tile[data-d]",root).forEach(b=>b.onclick=()=>devic
 function boardView(v){const all=S.board.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;
  const areas=[...new Set(S.board.rooms.map(r=>r.area||"").filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
  v.innerHTML=`<div class="ph"><div><h1>${esc(S.board.school||"All rooms")}</h1><p>${S.board.rooms.length} rooms · ${all.length} devices · updated ${ago(lastOk)}</p></div>
-  <div class="tools" style="margin:0">${isManager()?`<button class="btn dk" type="button" id="addRoom">${ui("plus")} Add a room</button>`:""}${isManager()?`<button class="btn" type="button" id="postNotice">📢 Post a notice</button>`:""}${isAdmin()?`<button class="btn" type="button" id="setSchool">School name</button>`:""}</div></div>
+  <div class="tools" style="margin:0">${isManager()?`<button class="btn dk" type="button" id="addRoom">${ui("plus")} Add a room</button>`:""}${isManager()?`<button class="btn" type="button" id="postNotice">📢 Post a notice</button><button class="btn" type="button" id="qfixBtn">💡 Quick fixes</button>`:""}${isAdmin()?`<button class="btn" type="button" id="setSchool">School name</button>`:""}</div></div>
  <div class="stats">${[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<button class="stat s-${k}" type="button" data-st="${k}" aria-pressed="${filt.st===k}"><span class="si">${ui(k,2)}</span><span><b>${c(k)}</b><span>${n}</span></span></button>`).join("")}</div>
  <div class="tools"><input type="search" id="q" placeholder="Search rooms, teachers, or devices" value="${esc(filt.q)}" aria-label="Search">${areas.length?`<select id="area" aria-label="Area"><option value="">All areas</option>${areas.map(a=>`<option ${filt.area===a?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}${filt.st?`<button class="btn sm" id="clr" type="button">Show everything</button>`:""}</div>
  <div id="roomsOut"></div>`;
  drawRooms();
  $$(".stat",v).forEach(b=>b.onclick=()=>{filt.st=filt.st===b.dataset.st?"":b.dataset.st;boardView(v)});
  $("#q").oninput=e=>{filt.q=e.target.value;drawRooms()};if($("#area"))$("#area").onchange=e=>{filt.area=e.target.value;drawRooms()};if($("#clr"))$("#clr").onclick=()=>{filt.st="";boardView(v)};
- if($("#addRoom"))$("#addRoom").onclick=()=>roomForm();if($("#postNotice"))$("#postNotice").onclick=noticeDlg;
+ if($("#addRoom"))$("#addRoom").onclick=()=>roomForm();if($("#postNotice"))$("#postNotice").onclick=noticeDlg;if($("#qfixBtn"))$("#qfixBtn").onclick=()=>fixesDlg();
  if($("#setSchool"))$("#setSchool").onclick=async()=>{const n=prompt("School name shown at the top:",S.board.school||"");if(n!=null)await act("school",{school:n},"Saved")}}
 function drawRooms(){const out=$("#roomsOut");const q=filt.q.trim().toLowerCase();
  const list=S.board.rooms.filter(r=>!filt.area||r.area===filt.area).map(r=>{const tn=teachersOf(r.id).map(t=>t.name).join(" ");
@@ -461,6 +487,7 @@ function drawRooms(){const out=$("#roomsOut");const q=filt.q.trim().toLowerCase(
 function myView(v){const rs=S.me.rooms.map(room).filter(Boolean);const mine=S.board.tickets.filter(t=>t.by===S.me.username||S.me.rooms.includes(t.room));
  v.innerHTML=`<div class="ph"><div><h1>${rs.length>1?"My rooms":"My room"}</h1><p>Tap anything that isn't working to tell your tech person.</p></div><button class="btn red" type="button" id="myRep">Report a problem</button></div>
  ${rs.length?`<div class="rooms">${rs.map(r=>roomCard(r,r.devices,false)).join("")}</div>`:`<div class="empty">No room is assigned to your account yet. Ask your admin to add it.</div>`}
+ ${(S.loans&&S.loans.loans||[]).length?`<h2 style="margin:28px 0 10px;font-size:1.15rem">Things I've borrowed</h2><div class="tl2">${S.loans.loans.map(l=>{const it=S.loans.items.find(i=>i.id===l.item)||{name:"Loaner",type:"Other"};const od=l.due&&l.due<Date.now();return `<div class="li"><span class="${od?"t-down":"t-ok"}">${loanIcon(it.type)}</span><span><b>${esc(it.name)}${it.asset?` · ${esc(it.asset)}`:""}</b><small>${l.due?(od?`<b style="color:var(--down)">Overdue</b>, was due ${dueTxt(l.due)}`:`Due back ${dueTxt(l.due)}`):"No due date"} · from ${esc(l.byName||"")}</small></span></div>`}).join("")}</div>`:""}
  <h2 style="margin:28px 0 10px;font-size:1.15rem">Tickets for ${rs.length>1?"my rooms":"my room"}</h2>${ticketList(mine.filter(t=>t.state!=="fixed"),"Nothing open right now.")}
  ${mine.some(t=>t.state==="fixed")?`<h2 style="margin:24px 0 10px;font-size:1.05rem;color:var(--muted)">Recently fixed</h2>${ticketList(mine.filter(t=>t.state==="fixed").slice(0,10),"")}`:""}`;
  wireTiles(v);$("#myRep").onclick=()=>reportDlg(rs[0]&&rs[0].id)}
@@ -505,12 +532,16 @@ function reportDlg(rid,did){if(!S.board.rooms.length){toast(S.me.role==="teacher
  const d=dlg(`<form class="dlg" id="fRep" novalidate><h2>Report a problem</h2><p class="hint" style="margin-top:0">Your tech person sees it on the board right away.</p>
   <label class="l" for="rRoom">Room</label><select id="rRoom" name="room">${S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(r=>`<option value="${r.id}">${esc(r.name)}${r.area?` · ${esc(r.area)}`:""}</option>`).join("")}</select>
   <label class="l">What isn't working?</label><div class="typegrid" id="rDevs"></div>
+  <div id="rFix"></div>
   <label class="l">How bad is it?</label><div class="sev"><label><input type="radio" name="sev" value="down" checked><span>Not working at all<small>Can't use it</small></span></label><label><input type="radio" name="sev" value="issue"><span>Has a problem<small>Usable, but something's wrong</small></span></label></div>
   <label class="l" for="rText">What's happening?</label><textarea id="rText" name="text" maxlength="1000" placeholder="Projector turns on but says “No signal” from my laptop."></textarea>
   <label class="l">Photo (optional)</label><div id="rPhoto" class="cphoto"></div>
   <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn red" type="submit">Send report</button></div></form>`,"wide");
  const fillDevs=()=>{const r=room($("#rRoom").value);$("#rDevs").innerHTML=r&&r.devices.length?r.devices.map((x,i)=>`<label class="t-${x.status}"><input type="radio" name="dev" value="${x.id}" ${(did?x.id===did:i===0)?"checked":""}>${icon(x.type)}${esc(dName(x))}</label>`).join(""):`<p class="hint">This room has no devices listed yet.</p>`};
- $("#rRoom").value=room(def)?def:S.board.rooms[0].id;fillDevs();const rp=photoPicker($("#rPhoto"));$("#rRoom").onchange=fillDevs;
+ const showFix=()=>{const r=room($("#rRoom").value),dv=$("#rDevs input[name=dev]:checked"),x=r&&dv&&devOf(r.id,dv.value),steps=x?(S.fixes||{})[x.type]||[]:[];const box=$("#rFix");
+  box.innerHTML=steps.length?`<div class="qfix"><div class="qh">💡 Try these first <span>(${esc(x.type)})</span></div><ol>${steps.map(t=>`<li>${esc(t)}</li>`).join("")}</ol><div class="qb"><button type="button" class="btn green sm" id="qOk">👍 That fixed it</button><span class="hint" style="margin:0">Still not working? Keep going below.</span></div></div>`:"";
+  if($("#qOk"))$("#qOk").onclick=async()=>{try{await api("selfFixed",{room:r.id,device:x.id});d.close();toast("Great, glad it's working! 🎉")}catch(e){toast(e.msg)}}};
+ $("#rRoom").value=room(def)?def:S.board.rooms[0].id;fillDevs();showFix();const rp=photoPicker($("#rPhoto"));$("#rRoom").onchange=()=>{fillDevs();showFix()};$("#rDevs").addEventListener("change",showFix);
  bindForm($("#fRep"),async fd=>{const text=String(fd.get("text")||"").trim();if(!fd.get("dev"))throw{msg:"Pick the device that isn't working."};if(!text)throw{msg:"Describe what's happening."};
   const j=await act("report",{room:fd.get("room"),device:fd.get("dev"),severity:fd.get("sev"),text,photo:rp.get()||undefined},"Report sent. Thanks!");localStorage.setItem("rsb.lastRoom",fd.get("room"));d.close();if(j&&j.ticket)location.hash="#/t/"+j.ticket});
  setTimeout(()=>(did?$("#rText"):$("#rRoom")).focus(),60)}
@@ -608,12 +639,110 @@ function showSlips(list,title){const url=location.origin+location.pathname.repla
 /* ===================== ACTIVITY ===================== */
 function activityView(v){if(!isManager()){v.innerHTML="";return}
  v.innerHTML=`<div class="ph"><div><h1>Activity</h1><p>The latest changes on the board, newest first.</p></div></div><div class="card" style="overflow-x:auto"><table class="t"><tbody>${(S.log||[]).map(l=>`<tr><td style="white-space:nowrap;color:var(--muted)">${when(l.ts)}</td><td><b>${esc(nameOf(l.by))}</b></td><td>${esc(l.text)}</td></tr>`).join("")||'<tr><td class="hint">Nothing yet.</td></tr>'}</tbody></table></div>`}
+/* ===================== LOANERS ===================== */
+const LOAN_ICON={Chromebook:"Laptop",Laptop:"Laptop",iPad:"iPad cart",Charger:"Other",Hotspot:"Wi-Fi access point",Calculator:"Computer",Headphones:"Speakers or sound",Camera:"Camera",Projector:"Projector",Speaker:"Speakers or sound","Cable or adapter":"Other",Other:"Other"};
+const loanIcon=t=>`<span class="ico">${svgOf(LOAN_ICON[t]||"Other")}</span>`;
+const dueTxt=t=>{const d=new Date(t),today=new Date();today.setHours(0,0,0,0);const n=Math.round((new Date(d).setHours(0,0,0,0)-today)/864e5);return n===0?"today":n===1?"tomorrow":n===-1?"yesterday":d.toLocaleDateString(undefined,{weekday:n>-7&&n<7?"short":undefined,month:"short",day:"numeric"})};
+let loanQ="",loanF="all";
+function loanState(it){const L=S.loans;const l=L.loans.find(x=>x.item===it.id&&!x.back);if(l)return{k:l.due&&l.due<Date.now()?"over":"out",l};return{k:it.status==="repair"?"repair":it.status==="retired"?"retired":"in"}}
+function loansView(v){if(!isManager()){v.innerHTML="";return}const L=S.loans||{items:[],loans:[]};
+ const st=L.items.map(it=>({it,...loanState(it)}));const c=k=>st.filter(x=>x.k===k).length;
+ v.innerHTML=`<div class="ph"><div><h1>Loaners</h1><p>Chromebooks, chargers, hotspots, and anything else you lend out. See who has what and what's overdue.</p></div>
+  <div class="tools" style="margin:0"><button class="btn" type="button" id="lnCsv">${ui("list")} Loan history spreadsheet</button><button class="btn dk" type="button" id="lnAdd">${ui("plus")} Add loaners</button></div></div>
+ <div class="stats">${[["in","Available","ok"],["out","Checked out","repair"],["over","Overdue","down"],["repair","Needs repair","issue"]].map(([k,n,cl])=>`<button class="stat s-${cl}" type="button" data-lf="${k}" aria-pressed="${loanF===k}"><span class="si">${ui(cl,2)}</span><span><b>${c(k)}</b><span>${n}</span></span></button>`).join("")}</div>
+ <div class="tools"><input type="search" id="lnQ" placeholder="Search by name, asset tag, serial, or who has it" value="${esc(loanQ)}" aria-label="Search loaners">${loanF!=="all"?`<button class="btn sm" type="button" id="lnAll">Show everything</button>`:""}</div><div id="lnList"></div>`;
+ const draw=()=>{const q=loanQ.trim().toLowerCase();const list=st.filter(x=>(loanF==="all"||x.k===loanF)&&x.k!=="retired"||loanF==="retired"&&x.k==="retired").filter(x=>!q||`${x.it.name} ${x.it.asset||""} ${x.it.serial||""} ${x.it.type} ${x.l?x.l.to:""}`.toLowerCase().includes(q))
+  .sort((a,b)=>({over:0,out:1,repair:2,in:3,retired:4}[a.k]-{over:0,out:1,repair:2,in:3,retired:4}[b.k])||a.it.name.localeCompare(b.it.name,undefined,{numeric:true}));
+  $("#lnList").innerHTML=!L.items.length?`<div class="empty">No loaners yet. Press <b>Add loaners</b> to list the devices you lend out.</div>`:!list.length?`<div class="empty">Nothing matches.</div>`:`<div class="tl2">${list.map(({it,k,l})=>`<div class="li ln-${k}"><span class="${k==="over"?"t-down":k==="out"?"t-repair":k==="repair"?"t-issue":"t-ok"}">${loanIcon(it.type)}</span>
+   <span><b>${esc(it.name)}${it.asset?` <span class="tag2">${esc(it.asset)}</span>`:""}</b><small>${k==="in"?"Available":k==="repair"?"Needs repair":k==="retired"?"Retired":`${k==="over"?'<b style="color:var(--down)">Overdue</b> · ':""}With <b>${esc(l.to)}</b> since ${dueTxt(l.out)}${l.due?` · due ${dueTxt(l.due)}`:""}`}${it.type?` · ${esc(it.type)}`:""}</small></span>
+   ${k==="out"||k==="over"?`<button class="btn sm dk" type="button" data-in="${l.id}">Check in</button>`:k==="in"?`<button class="btn sm red" type="button" data-out="${it.id}">Check out</button>`:""}<button class="btn sm" type="button" data-ed="${it.id}">${ui("edit")}</button></div>`).join("")}</div>`;
+  $$("[data-out]").forEach(b=>b.onclick=()=>checkoutDlg(b.dataset.out));$$("[data-in]").forEach(b=>b.onclick=()=>checkinDlg(b.dataset.in));$$("[data-ed]").forEach(b=>b.onclick=()=>loanItemDlg(b.dataset.ed))};
+ draw();$("#lnQ").oninput=e=>{loanQ=e.target.value;draw()};$$("[data-lf]").forEach(b=>b.onclick=()=>{loanF=loanF===b.dataset.lf?"all":b.dataset.lf;loansView(v)});if($("#lnAll"))$("#lnAll").onclick=()=>{loanF="all";loansView(v)};
+ $("#lnAdd").onclick=loanAddDlg;
+ $("#lnCsv").onclick=()=>{const nm=id=>(L.items.find(i=>i.id===id)||{});csvDownload(`loans-${stamp()}.csv`,[["Item","Asset tag","Type","Borrowed by","Checked out","Due","Checked in","Condition","Notes","Checked out by"],...L.loans.map(l=>{const it=nm(l.item);return [it.name||"(removed)",it.asset||"",it.type||"",l.to,new Date(l.out).toLocaleString(),l.due?new Date(l.due).toLocaleDateString():"",l.back?new Date(l.back).toLocaleString():"",l.condition||"",[l.notes,l.backNotes].filter(Boolean).join(" / "),l.byName||""]})]);toast("Loan history downloaded")}}
+async function loanAct(action,data,msg){const j=await api(action,data);S.loans=j.loans;if(msg)toast(msg);route();return j}
+function loanAddDlg(){const d=dlg(`<form class="dlg" id="fLA" novalidate><h2>Add loaners</h2><p class="hint" style="margin-top:0">One per line: <b>name, asset tag, type, serial</b>. Only the name is required. Types: ${S.loanTypes.join(", ")}.</p>
+  <textarea id="lat" name="t" style="min-height:180px;font-family:ui-monospace,Consolas,monospace;font-size:.9rem" placeholder="Loaner Chromebook 1, FS-L001, Chromebook\nLoaner Chromebook 2, FS-L002, Chromebook\nUSB-C charger A, , Charger\nHotspot 1, FS-H01, Hotspot, 35920111"></textarea><div class="hint" id="laPrev"></div>
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Add</button></div></form>`,"wide");
+ const parse=()=>Kit_lines($("#lat").value).map(l=>{const[name,asset,type,serial]=l.split(/\s*[,\t]\s*/);const t=S.loanTypes.find(x=>x.toLowerCase()===String(type||"").toLowerCase())||(/chromebook/i.test(l)?"Chromebook":/ipad/i.test(l)?"iPad":/charger/i.test(l)?"Charger":/hotspot/i.test(l)?"Hotspot":/laptop/i.test(l)?"Laptop":"Other");return{name,asset,type:t,serial}}).filter(x=>x.name);
+ $("#lat").oninput=()=>{const r=parse();$("#laPrev").textContent=r.length?`${r.length} item${r.length===1?"":"s"}: ${r.slice(0,5).map(x=>x.name+" ("+x.type+")").join(", ")}${r.length>5?", …":""}`:""};
+ bindForm($("#fLA"),async()=>{const r=parse();if(!r.length)throw{msg:"Add at least one line."};await loanAct("loanItemAdd",{items:r},`${r.length} loaner${r.length===1?"":"s"} added`);d.close()})}
+const Kit_lines=t=>String(t).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+function checkoutDlg(itemId){const it=S.loans.items.find(i=>i.id===itemId);const due=new Date();due.setDate(due.getDate()+7);
+ const people=(S.users||S.people).filter(p=>!p.disabled);
+ const d=dlg(`<form class="dlg" id="fCO" novalidate><h2>Check out ${esc(it.name)}</h2>
+  <label class="l" for="coTo">Who's borrowing it?</label><input id="coTo" name="to" list="coPeople" maxlength="60" placeholder="Staff or student name" autocomplete="off" required><datalist id="coPeople">${people.map(p=>`<option value="${esc(p.name)}">${esc(p.username)}</option>`).join("")}</datalist>
+  <p class="hint" id="coLink"></p>
+  <div class="g2"><div><label class="l" for="coDue">Due back</label><input id="coDue" name="due" type="date" value="${due.toISOString().slice(0,10)}"></div>
+  <div><label class="l">&nbsp;</label><div class="btns"><button type="button" class="btn sm" data-dd="0">Today</button><button type="button" class="btn sm" data-dd="1">Tomorrow</button><button type="button" class="btn sm" data-dd="7">1 week</button><button type="button" class="btn sm" data-dd="">No date</button></div></div></div>
+  <label class="l" for="coN">Notes (optional)</label><input id="coN" name="notes" maxlength="300" placeholder="With charger and case">
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn red" type="submit">Check out</button></div></form>`);
+ const link=()=>{const p=people.find(x=>x.name.toLowerCase()===$("#coTo").value.trim().toLowerCase());$("#coLink").innerHTML=p?`Linked to <b>${esc(p.username)}</b>'s account, so it shows on their board.`:"";return p};$("#coTo").oninput=link;
+ $$("[data-dd]",d).forEach(b=>b.onclick=()=>{if(b.dataset.dd===""){$("#coDue").value="";return}const x=new Date();x.setDate(x.getDate()+ +b.dataset.dd);$("#coDue").value=x.toISOString().slice(0,10)});
+ bindForm($("#fCO"),async fd=>{const p=link();const dv=fd.get("due");const dueMs=dv?new Date(dv+"T23:59:00").getTime():null;
+  await loanAct("checkout",{item:it.id,to:fd.get("to"),toUser:p?p.username:null,due:dueMs,notes:fd.get("notes")},`${it.name} checked out`);d.close()});setTimeout(()=>$("#coTo").focus(),60)}
+function checkinDlg(loanId){const l=S.loans.loans.find(x=>x.id===loanId);const it=S.loans.items.find(i=>i.id===l.item)||{name:"Loaner"};
+ const d=dlg(`<form class="dlg" id="fCI" novalidate><h2>Check in ${esc(it.name)}</h2><p class="hint" style="margin-top:0">From ${esc(l.to)} · out since ${dueTxt(l.out)}${l.notes?` · ${esc(l.notes)}`:""}</p>
+  <label class="l">How did it come back?</label><div class="sev"><label><input type="radio" name="cond" value="good" checked><span>Good<small>Ready to lend again</small></span></label><label><input type="radio" name="cond" value="damaged"><span>Damaged<small>Marks it “Needs repair”</small></span></label><label><input type="radio" name="cond" value="missing"><span>Missing parts<small>Charger, case, etc.</small></span></label></div>
+  <label class="l" for="ciN">Notes (optional)</label><input id="ciN" name="notes" maxlength="300" placeholder="Cracked corner, no charger">
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Check in</button></div></form>`);
+ bindForm($("#fCI"),async fd=>{await loanAct("checkin",{loan:l.id,condition:fd.get("cond"),notes:fd.get("notes")},`${it.name} checked in`);d.close()})}
+function loanItemDlg(id){const it=S.loans.items.find(i=>i.id===id);const hist=S.loans.loans.filter(l=>l.item===id).slice(0,12);const out=it.status==="out";
+ const d=dlg(`<form class="dlg" id="fLI" novalidate><h2>${esc(it.name)}</h2>
+  <div class="g2"><div><label class="l" for="liN">Name</label><input id="liN" name="name" maxlength="80" value="${esc(it.name)}" required></div><div><label class="l" for="liT">Type</label><select id="liT" name="type">${S.loanTypes.map(t=>`<option ${t===it.type?"selected":""}>${esc(t)}</option>`).join("")}</select></div>
+  <div><label class="l" for="liA">Asset tag</label><input id="liA" name="asset" maxlength="80" value="${esc(it.asset||"")}"></div><div><label class="l" for="liS">Serial number</label><input id="liS" name="serial" maxlength="80" value="${esc(it.serial||"")}"></div></div>
+  <label class="l" for="liNo">Notes</label><textarea id="liNo" name="notes" maxlength="1000">${esc(it.notes||"")}</textarea>
+  ${out?"":`<label class="l" for="liSt">Status</label><select id="liSt" name="status"><option value="in" ${it.status==="in"?"selected":""}>Available</option><option value="repair" ${it.status==="repair"?"selected":""}>Needs repair</option><option value="retired" ${it.status==="retired"?"selected":""}>Retired (hide it)</option></select>`}
+  <h3 style="margin:16px 0 0;font-size:1rem">History</h3><div class="hist">${hist.length?hist.map(l=>`<div class="hrow"><span><b>${esc(l.to)}</b> · ${new Date(l.out).toLocaleDateString()}${l.back?` → ${new Date(l.back).toLocaleDateString()}`:" → <b>still out</b>"}${l.condition&&l.condition!=="good"?` · <span style="color:var(--down)">${l.condition==="damaged"?"damaged":"missing parts"}</span>`:""}</span><span class="hint" style="margin:0">${esc([l.notes,l.backNotes].filter(Boolean).join(" / "))}</span></div>`).join(""):'<p class="hint">Never checked out.</p>'}</div>
+  <p class="err" role="alert"></p><div class="foot">${out?"":`<button class="btn" type="button" id="liDel" style="margin-right:auto;color:var(--down)">${ui("trash")} Remove</button>`}<button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Save</button></div></form>`,"wide");
+ bindForm($("#fLI"),async fd=>{await loanAct("loanItemEdit",{id,...Object.fromEntries(fd.entries())},"Saved");d.close()});
+ if($("#liDel"))$("#liDel").onclick=async()=>{if(!confirm(`Remove ${it.name} from the loaner list? Its history goes too.`))return;await loanAct("loanItemDel",{id},"Removed");d.close()}}
+
+/* ===================== WALKTHROUGHS ===================== */
+const walkStats=w=>{const devs=w.rooms.flatMap(rid=>(room(rid)||{devices:[]}).devices.map(d=>d.id));const done=devs.filter(id=>w.results[id]).length,bad=devs.filter(id=>w.results[id]&&!w.results[id].ok).length;return{total:devs.length,done,bad}};
+function walksView(v){if(!isManager()){v.innerHTML="";return}const W=S.walks||[];
+ v.innerHTML=`<div class="ph"><div><h1>Walkthroughs</h1><p>Walk room to room with your phone and check every device. Anything marked broken becomes a ticket automatically.</p></div><button class="btn dk" type="button" id="wNew">${ui("plus")} Start a walkthrough</button></div>
+ ${W.length?`<div class="tl2">${W.map(w=>{const s=walkStats(w);return `<a class="li" href="#/walk/${w.id}"><span class="${w.done?"t-ok":"t-repair"}"><span class="ico">${ui(w.done?"check":"list")}</span></span><span><b>${esc(w.name)}</b><small>${w.done?`Finished ${dueTxt(w.done)}`:`Started ${dueTxt(w.started)} by ${esc(w.byName||"")}`} · ${s.done} of ${s.total} checked${s.bad?` · <b style="color:var(--down)">${s.bad} problem${s.bad===1?"":"s"}</b>`:""}</small><span class="wbar"><i style="width:${s.total?s.done/s.total*100:0}%"></i></span></span></a>`}).join("")}</div>`:`<div class="empty">No walkthroughs yet. Start one before summer break, after a long weekend, or once a month.</div>`}`;
+ $("#wNew").onclick=()=>{const rs=S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  const d=dlg(`<form class="dlg" id="fW" novalidate><h2>Start a walkthrough</h2><label class="l" for="wn">Name</label><input id="wn" name="name" maxlength="60" value="Room check, ${new Date().toLocaleDateString(undefined,{month:"long",year:"numeric"})}">
+   <label class="l">Rooms <button type="button" class="btn sm" id="wAll" style="margin-left:8px">Select all</button> <button type="button" class="btn sm" id="wNone">Clear</button></label>${roomPicker(rs.map(r=>r.id))}
+   <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Start</button></div></form>`,"wide");
+  $("#wAll").onclick=()=>$$('#fW input[name=rooms]').forEach(c=>c.checked=true);$("#wNone").onclick=()=>$$('#fW input[name=rooms]').forEach(c=>c.checked=false);
+  bindForm($("#fW"),async fd=>{const j=await api("walkStart",{name:fd.get("name"),rooms:fd.getAll("rooms")});S.walks=j.walks;d.close();location.hash="#/walk/"+j.id})}}
+async function walkAct(data){const j=await api(data.action,data);S.walks=j.walks;if(j.board)S.board=j.board;return j}
+function walkView(v,[wid,rid]){const w=(S.walks||[]).find(x=>x.id===wid);if(!w){v.innerHTML=`<div class="empty">That walkthrough isn't here anymore. <a href="#/walks">Back to walkthroughs</a></div>`;return}
+ const s=walkStats(w);const rooms=w.rooms.map(room).filter(Boolean);
+ const roomDone=r=>r.devices.filter(d=>w.results[d.id]).length,roomBad=r=>r.devices.filter(d=>w.results[d.id]&&!w.results[d.id].ok).length;
+ if(!rid){v.innerHTML=`<p style="margin:0 0 12px"><a href="#/walks">← All walkthroughs</a></p><div class="ph"><div><h1>${esc(w.name)}</h1><p>${s.done} of ${s.total} devices checked${s.bad?` · <b style="color:var(--down)">${s.bad} problem${s.bad===1?"":"s"} found</b>`:""}${w.done?` · finished ${dueTxt(w.done)}`:""}</p></div>
+   <div class="tools" style="margin:0">${w.done?`<button class="btn" type="button" id="wReopen">Reopen</button>`:`<button class="btn dk" type="button" id="wFin">${ui("check")} Finish</button>`}<button class="btn" type="button" id="wCsv">${ui("list")} Spreadsheet</button><button class="btn" type="button" id="wDel">${ui("trash")}</button></div></div>
+   <div class="wbar big"><i style="width:${s.total?s.done/s.total*100:0}%"></i></div>
+   <div class="wrooms">${rooms.map(r=>{const n=roomDone(r),b=roomBad(r),all=r.devices.length;return `<a class="wroom ${n===all&&all?"done":""} ${b?"bad":""}" href="#/walk/${w.id}/${r.id}"><b>${esc(r.name)}</b><small>${esc(r.area||"")}</small><span>${all?`${n}/${all}`:"No devices"}${b?` · ${b} ✗`:n===all&&all?" ✓":""}</span></a>`}).join("")}</div>`;
+  if($("#wFin"))$("#wFin").onclick=async()=>{if(s.done<s.total&&!confirm(`${s.total-s.done} devices haven't been checked yet. Finish anyway?`))return;await walkAct({action:"walkFinish",walk:w.id});toast("Walkthrough finished");route()};
+  if($("#wReopen"))$("#wReopen").onclick=async()=>{await walkAct({action:"walkFinish",walk:w.id,reopen:true});route()};
+  $("#wDel").onclick=async()=>{if(!confirm("Delete this walkthrough? Tickets it made stay on the board."))return;await walkAct({action:"walkDel",walk:w.id});location.hash="#/walks"};
+  $("#wCsv").onclick=()=>csvDownload(`walkthrough-${stamp()}.csv`,[["Room","Area","Device","Type","Asset tag","Result","Note","Checked by","When"],...rooms.flatMap(r=>r.devices.map(d=>{const x=w.results[d.id];return [r.name,r.area||"",dName(d),d.type,d.asset||"",x?(x.ok?"OK":"Problem"):"Not checked",x?x.note||"":"",x?x.by||"":"",x?new Date(x.ts).toLocaleString():""]}))]);
+  return}
+ const r=room(rid);if(!r){location.hash="#/walk/"+w.id;return}const i=rooms.indexOf(r),next=rooms.slice(i+1).concat(rooms.slice(0,i)).find(x=>roomDone(x)<x.devices.length);
+ v.innerHTML=`<p style="margin:0 0 12px"><a href="#/walk/${w.id}">← ${esc(w.name)}</a></p><div class="ph"><div><h1>${esc(r.name)}</h1><p>${roomDone(r)} of ${r.devices.length} checked. Tap ✓ if it works, ✗ if it doesn't.</p></div></div>
+  <div class="wdevs">${r.devices.map(d=>{const x=w.results[d.id];return `<div class="wdev ${x?(x.ok?"ok":"bad"):""}"><span class="t-${x?(x.ok?"ok":"down"):d.status}">${icon(d.type)}</span><div class="wn"><b>${esc(dName(d))}</b><small>${esc(d.type)}${d.asset?" · "+esc(d.asset):""}${x&&x.note?` · ${esc(x.note)}`:""}${x&&x.ticket?` · <a href="#/t/${x.ticket}">ticket</a>`:""}${!x&&d.status!=="ok"?` · currently ${DS[d.status].toLowerCase()}`:""}</small></div>
+   <div class="wbtns"><button class="wok ${x&&x.ok?"on":""}" type="button" data-ok="${d.id}" aria-label="Works">${ui("check",3)}</button><button class="wbad ${x&&!x.ok?"on":""}" type="button" data-bad="${d.id}" aria-label="Problem">${ui("x",3)}</button></div></div>`}).join("")||'<div class="empty">This room has no devices listed.</div>'}</div>
+  <div class="row" style="display:flex;gap:10px;justify-content:space-between;margin-top:16px;flex-wrap:wrap"><button class="btn" type="button" id="wAllOk">${ui("check")} Mark the rest working</button>${next?`<a class="btn dk" href="#/walk/${w.id}/${next.id}">Next room: ${esc(next.name)} →</a>`:`<a class="btn dk" href="#/walk/${w.id}">Back to all rooms</a>`}</div>`;
+ const mark=async(did,ok,note,sev)=>{try{const j=await walkAct({action:"walkMark",walk:w.id,room:r.id,device:did,ok,note,severity:sev});if(j.ticket&&!ok)toast("Ticket made");route()}catch(e){toast(e.msg)}};
+ $$("[data-ok]",v).forEach(b=>b.onclick=()=>{const x=w.results[b.dataset.ok];if(x&&x.ok){walkAct({action:"walkMark",walk:w.id,room:r.id,device:b.dataset.ok,clear:true}).then(route);return}mark(b.dataset.ok,true)});
+ $$("[data-bad]",v).forEach(b=>b.onclick=()=>{const d=devOf(r.id,b.dataset.bad);const x=w.results[d.id];
+  const dl=dlg(`<form class="dlg" id="fWB" novalidate><h2>${esc(dName(d))} · ${esc(r.name)}</h2>${x&&x.ticket?`<p class="hint" style="margin-top:0">A ticket was already made for this in this walkthrough.</p>`:`<p class="hint" style="margin-top:0">This makes a ticket on the board.</p>`}
+   <div class="sev"><label><input type="radio" name="sev" value="down"><span>Not working<small>Can't use it</small></span></label><label><input type="radio" name="sev" value="issue" checked><span>Has a problem<small>Usable, but something's wrong</small></span></label></div>
+   <label class="l" for="wbn">What's wrong?</label><input id="wbn" name="note" maxlength="300" placeholder="Lamp dim, remote missing" value="${esc(x&&x.note||"")}">
+   <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn red" type="submit">Mark as a problem</button></div></form>`);
+  setTimeout(()=>$("#wbn").focus(),60);bindForm($("#fWB"),async fd=>{dl.close();await mark(d.id,false,fd.get("note"),fd.get("sev"))})});
+ $("#wAllOk").onclick=async()=>{for(const d of r.devices)if(!w.results[d.id])await walkAct({action:"walkMark",walk:w.id,room:r.id,device:d.id,ok:true});toast("Marked working");route()}}
+
 /* ===================== REPORTS ===================== */
 async function reportsView(v){if(!isManager()){v.innerHTML="";return}
  v.innerHTML=`<div class="ph"><div><h1>Reports</h1><p>How the tech is holding up, what needs attention, and your inventory.</p></div>
   <div class="tools" style="margin:0"><button class="btn" type="button" id="qrBtn">${ui("print")} QR stickers</button><button class="btn" type="button" id="invBtn">${ui("list")} Inventory spreadsheet</button><button class="btn" type="button" id="tkBtn">${ui("list")} Ticket spreadsheet</button></div></div><div id="rep"><div class="empty">Loading…</div></div>`;
  $("#qrBtn").onclick=qrDlg;$("#invBtn").onclick=exportInventory;
- let T;try{T=(await api("stats")).tickets}catch(e){$("#rep").innerHTML=`<div class="banner bad">${esc(e.msg)}</div>`;return}
+ let T,SF=[];try{const st=await api("stats");T=st.tickets;SF=st.selfFixed||[]}catch(e){$("#rep").innerHTML=`<div class="banner bad">${esc(e.msg)}</div>`;return}
  const devName=t=>{const r=room(t.room),d=r&&devOf(t.room,t.device);return [r?r.name:"(removed room)",d?dName(d):"(removed device)"]};
  $("#tkBtn").onclick=()=>{csvDownload(`tickets-${stamp()}.csv`,[["Opened","Room","Device","How bad","Status","Reported by","Handling","Fixed","Days to fix","Problem"],...T.map(t=>{const[r,d]=devName(t);return [new Date(t.opened).toLocaleString(),r,d,t.severity==="down"?"Not working":"Has a problem",TS[t.state],t.by||"",t.assignee?nameOf(t.assignee):"",t.closed?new Date(t.closed).toLocaleString():"",t.closed?((t.closed-t.opened)/864e5).toFixed(1):"",t.text||""]})]);toast("Tickets downloaded")};
  const now=Date.now(),D=864e5,open=T.filter(t=>t.state!=="fixed"),last30=T.filter(t=>t.opened>now-30*D),fixed30=T.filter(t=>t.closed&&t.closed>now-30*D);
@@ -631,6 +760,7 @@ async function reportsView(v){if(!isManager()){v.innerHTML="";return}
   <div class="stat s-issue"><span class="si">${ui("issue",2)}</span><span><b>${last30.length}</b><span>Reported in 30 days</span></span></div>
   <div class="stat s-ok"><span class="si">${ui("ok",2)}</span><span><b>${fixed30.length}</b><span>Fixed in 30 days</span></span></div>
   <div class="stat s-repair"><span class="si">${ui("repair",2)}</span><span><b style="font-size:1.35rem">${fixT.length?dur(avg):"–"}</b><span>Average time to fix</span></span></div></div>
+ ${SF.length?`<div class="banner" style="margin-top:4px">💡 Teachers fixed <b>${SF.filter(x=>x.ts>now-30*D).length}</b> problem${SF.filter(x=>x.ts>now-30*D).length===1?"":"s"} themselves with quick fixes in the last 30 days (${SF.length} in all). Top: ${Object.entries(SF.reduce((a,x)=>(a[x.type]=(a[x.type]||0)+1,a),{})).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,n])=>`${esc(t)} ${n}`).join(", ")}.</div>`:""}
  <div class="repgrid">
   <section class="card pad"><h3>Problems reported per month</h3><div class="bars">${mc.map((n,i)=>`<div class="bar"><span class="bn">${n}</span><i style="height:${Math.max(2,n/mx*100)}%"></i><span class="bl">${months[i].toLocaleString(undefined,{month:"short"})}</span></div>`).join("")}</div></section>
   <section class="card pad"><h3>⏳ Coming up</h3>${up.length?`<div class="tl2">${up.map(u=>`<button class="li" type="button" data-r="${u.r.id}" data-d="${u.d.id}"><span class="t-${u.lvl==="bad"?"down":u.lvl==="warn"?"issue":"repair"}">${icon(u.d.type)}</span><span><b>${esc(u.r.name)} · ${esc(dName(u.d))}</b><small>${esc(u.txt)}${u.d.model?" · "+esc(u.d.model):""}</small></span></button>`).join("")}</div>`:`<p class="hint">Nothing due. Add warranty dates and lamp hours to devices (Edit details → Warranty and upkeep) to track them here.</p>`}</section>
