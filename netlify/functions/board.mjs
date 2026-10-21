@@ -2,8 +2,12 @@
 //
 // Environment variables (Netlify > Site configuration > Environment variables):
 //   ADMIN_PIN  (required) used once to create the first admin account, and later to recover an admin password.
+//   Email alerts (optional, pick one):
+//     SMTP_USER + SMTP_PASS  a Gmail address and a Google app password (or set SMTP_HOST / SMTP_PORT for another provider)
+//     RESEND_API_KEY + MAIL_FROM  a Resend.com key and a verified sender address
+//   MAIL_NAME (optional) the sender name on alerts. Default: Room Tech Status
 //
-// All requests go to /api/board. GET ?display=<key> serves the read-only wall display.
+// All requests go to /api/board. GET ?display=<key> serves the read-only wall display, GET ?photo=<id>&s=<sig> serves a photo.
 // Everything else is POST {action, ...} with "Authorization: Bearer <session token>" once signed in.
 import { scryptSync, randomBytes, createHmac, timingSafeEqual } from "node:crypto";
 
@@ -15,6 +19,7 @@ const TICKET_STATES = ["open", "progress", "waiting", "fixed"];
 const ROLES = ["admin", "tech", "teacher"];
 const L = { rooms: 400, devices: 60, tickets: 1500, comments: 100, users: 500, name: 60, text: 1000, field: 80, log: 400 };
 const DAY = 86400000;
+const PHOTO_MAX = 2500000;
 
 /* ---------- storage ---------- */
 function hash32(t) { let h = 0; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return h; }
@@ -51,6 +56,100 @@ async function mutate(key, init, fn) {
 }
 async function read(key, init) { const { data } = await (await storage()).get(key); return data || init(); }
 
+/* ---------- photos (kept in their own store so the board stays small) ---------- */
+let _ph;
+async function photoStore() {
+  if (_ph) return _ph;
+  if (process.env.BOARD_DIR) {
+    const fs = await import("node:fs"), path = await import("node:path"); const dir = path.join(process.env.BOARD_DIR, "photos"); fs.mkdirSync(dir, { recursive: true });
+    return (_ph = { get: async k => { try { return fs.readFileSync(path.join(dir, k)); } catch { return null; } }, set: async (k, buf) => fs.writeFileSync(path.join(dir, k), buf) });
+  }
+  const { getStore } = await import("@netlify/blobs");
+  const store = getStore({ name: "room-photos" });
+  return (_ph = { get: async k => { const a = await store.get(k, { type: "arrayBuffer" }); return a ? Buffer.from(a) : null; }, set: (k, buf) => store.set(k, buf) });
+}
+async function savePhoto(dataUrl) {
+  if (!dataUrl) return null;
+  const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl));
+  if (!m) throw new HttpError(400, "That photo couldn't be read. Try a different picture.");
+  const buf = Buffer.from(m[2], "base64"); if (buf.length > PHOTO_MAX) throw new HttpError(400, "That photo is too big.");
+  const key = id() + randomBytes(6).toString("hex") + "." + (m[1] === "jpeg" ? "jpg" : m[1]);
+  await (await photoStore()).set(key, buf); return key;
+}
+const photoSig = (sec, k) => createHmac("sha256", sec).update("p:" + k).digest("base64url").slice(0, 22);
+const photoUrl = (sec, k) => `api/board?photo=${encodeURIComponent(k)}&s=${photoSig(sec, k)}`;
+
+/* ---------- email alerts ---------- */
+const SITE = () => (process.env.URL || "").replace(/\/$/, "");
+export const mailReady = () => !!(process.env.RESEND_API_KEY || (process.env.SMTP_USER && process.env.SMTP_PASS) || process.env.MAIL_TEST_DIR);
+const escH = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function emailBody(title, lines, link, linkText) {
+  const text = [title, "", ...lines, "", link ? `${linkText || "Open the board"}: ${link}` : "", "", "Room Tech Status by Davis Tech Support. Change which emails you get under My settings on the board."].join("\n");
+  const html = `<div style="font-family:Segoe UI,Arial,sans-serif;background:#F3F5F9;padding:24px"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;border:1px solid #E1E6EE;overflow:hidden">
+<div style="background:#14213D;color:#fff;padding:14px 20px;font-weight:700;font-size:16px">Room Tech Status</div><div style="padding:20px;color:#132033;font-size:15px;line-height:1.5">
+<h2 style="margin:0 0 12px;font-size:19px">${escH(title)}</h2>${lines.map(l => `<p style="margin:0 0 8px">${escH(l)}</p>`).join("")}
+${link ? `<p style="margin:18px 0 4px"><a href="${escH(link)}" style="background:#E8453C;color:#fff;text-decoration:none;padding:11px 18px;border-radius:9px;font-weight:700;display:inline-block">${escH(linkText || "Open the board")}</a></p>` : ""}</div>
+<div style="padding:12px 20px;color:#5D6B7E;font-size:12px;border-top:1px solid #E1E6EE">Room Tech Status by Davis Tech Support. Change which emails you get under <b>My settings</b> on the board.</div></div></div>`;
+  return { text, html };
+}
+async function sendMail(to, subject, body) {
+  if (!to || !mailReady()) return false;
+  const name = process.env.MAIL_NAME || "Room Tech Status";
+  if (process.env.MAIL_TEST_DIR) { const fs = await import("node:fs"); fs.mkdirSync(process.env.MAIL_TEST_DIR, { recursive: true }); fs.appendFileSync(process.env.MAIL_TEST_DIR + "/mail.jsonl", JSON.stringify({ to, subject, text: body.text }) + "\n"); return true; }
+  if (process.env.RESEND_API_KEY) {
+    const r = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: "Bearer " + process.env.RESEND_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ from: `${name} <${process.env.MAIL_FROM || "onboarding@resend.dev"}>`, to: [to], subject, text: body.text, html: body.html }) });
+    if (!r.ok) throw new Error("Resend " + r.status + " " + (await r.text()).slice(0, 200)); return true;
+  }
+  const nodemailer = (await import("nodemailer")).default; const port = +(process.env.SMTP_PORT || 465);
+  const t = nodemailer.createTransport({ host: process.env.SMTP_HOST || "smtp.gmail.com", port, secure: port === 465, auth: { user: process.env.SMTP_USER, pass: String(process.env.SMTP_PASS).replace(/\s+/g, "") } });
+  await t.sendMail({ from: `"${name}" <${process.env.MAIL_FROM || process.env.SMTP_USER}>`, to, subject, text: body.text, html: body.html }); return true;
+}
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+async function mailMany(list) { const r = await Promise.allSettled(list.map(([to, sub, body]) => withTimeout(sendMail(to, sub, body), 9000))); r.forEach(x => { if (x.status === "rejected") console.error("email failed:", x.reason && x.reason.message); }); }
+const prefs = u => ({ reports: u.role === "teacher" ? "none" : "down", replies: true, digest: u.role === "admin", ...(u.notify || {}) });
+async function notify(kind, t, b, me) {
+  if (!mailReady() || !t) return;
+  const users = (await read("users", () => ({ list: [] }))).list.filter(u => !u.disabled && u.email && u.username !== me.username);
+  const r = b.rooms.find(x => x.id === t.room), d = r && r.devices.find(x => x.id === t.device);
+  const where = `${r ? r.name : "A room"}: ${d ? d.name || d.type : "a device"}`, link = SITE() ? `${SITE()}/#/t/${t.id}` : "";
+  const staff = u => u.role !== "teacher", last = (t.comments || []).filter(c => c.role !== "system").slice(-1)[0];
+  const STATE = { open: "Open", progress: "Working on it", waiting: "Waiting on parts", fixed: "Fixed" };
+  let to = [], subject = "", body;
+  if (kind === "report") {
+    to = users.filter(u => staff(u) && (prefs(u).reports === "all" || (prefs(u).reports === "down" && t.severity === "down")));
+    subject = `${t.severity === "down" ? "🔴 Not working" : "🟠 Problem"}: ${where}`;
+    body = emailBody(subject, [`${t.byName || "Someone"} reported: “${t.text}”`, t.photos && t.photos.length ? "A photo is attached on the board." : ""].filter(Boolean), link, "Open the ticket");
+  } else if (kind === "staffReply" || kind === "state") {
+    to = users.filter(u => u.username === t.by && prefs(u).replies);
+    subject = kind === "state" ? `${STATE[t.state]}: ${where}` : `New reply: ${where}`;
+    body = emailBody(subject, kind === "state" ? [`${me.name} marked your ticket “${STATE[t.state].toLowerCase()}.”`, `Your report: “${t.text}”`] : [`${me.name} wrote: “${last ? last.text : ""}”`], link, "Open the ticket");
+  } else if (kind === "teacherReply") {
+    to = users.filter(u => staff(u) && prefs(u).replies && (t.assignee ? u.username === t.assignee : prefs(u).reports === "all" || u.role === "admin"));
+    subject = `New reply: ${where}`; body = emailBody(subject, [`${me.name} wrote: “${last ? last.text : ""}”`], link, "Open the ticket");
+  }
+  await mailMany(to.map(u => [u.email, subject, body]));
+}
+
+/* ---------- daily check: warranties, projector lamps, and old tickets (run by daily.mjs) ---------- */
+export async function runDaily(now = Date.now()) {
+  const b0 = upgrade(await read("board", blankBoard)); const items = [];
+  for (const r of b0.rooms) for (const d of r.devices) {
+    if (d.warranty && d.warnW !== d.warranty) { const days = Math.ceil((Date.parse(d.warranty) - now) / DAY); if (days <= 30 && days >= -1) items.push({ r: r.id, d: d.id, k: "W", text: `${r.name}: ${d.name || d.type}${d.model ? " (" + d.model + ")" : ""} warranty ${days < 0 ? "ended" : days === 0 ? "ends today" : `ends in ${days} day${days === 1 ? "" : "s"}`} (${d.warranty})` }); }
+    if (d.lampLife > 0 && d.lampHours >= d.lampLife * 0.9 && !d.warnL) items.push({ r: r.id, d: d.id, k: "L", text: `${r.name}: ${d.name || d.type} lamp is at ${d.lampHours} of ${d.lampLife} hours` });
+  }
+  const monday = new Date(now).getUTCDay() === 1;
+  const stale = monday ? b0.tickets.filter(t => t.state !== "fixed" && now - t.opened > 7 * DAY) : [];
+  if (!items.length && !stale.length) return { sent: 0, items: 0 };
+  const users = (await read("users", () => ({ list: [] }))).list.filter(u => !u.disabled && u.email && prefs(u).digest);
+  const nm = id => { const r = b0.rooms.find(x => x.id === id.room), d = r && r.devices.find(x => x.id === id.device); return `${r ? r.name : "?"}: ${d ? d.name || d.type : "?"}`; };
+  const lines = [...items.map(i => i.text), ...(stale.length ? [`${stale.length} ticket${stale.length === 1 ? " has" : "s have"} been open more than a week:`, ...stale.slice(0, 15).map(t => `• ${nm(t)}, opened ${new Date(t.opened).toDateString()}`)] : [])];
+  const subject = items.length ? `Heads up: ${items.length} warranty or lamp reminder${items.length === 1 ? "" : "s"}` : `${stale.length} ticket${stale.length === 1 ? "" : "s"} open more than a week`;
+  await mailMany(users.map(u => [u.email, subject, emailBody(subject, lines, SITE() ? SITE() + "/#/reports" : "", "Open reports")]));
+  if (users.length && items.length) await mutate("board", blankBoard, b => { for (const i of items) { const r = b.rooms.find(x => x.id === i.r), d = r && r.devices.find(x => x.id === i.d); if (!d) continue; if (i.k === "W") d.warnW = d.warranty; else d.warnL = true; } });
+  return { sent: users.length, items: items.length, stale: stale.length };
+}
+
 /* ---------- helpers ---------- */
 class HttpError extends Error { constructor(s, m, extra) { super(m); this.status = s; this.extra = extra; } }
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -65,7 +164,9 @@ function hashPw(pw, salt = randomBytes(16).toString("hex")) { return { salt, has
 function checkPw(pw, u) { if (!u || !u.hash) return false; const h = scryptSync(String(pw), u.salt, 32, { N: 16384, r: 8, p: 1 }).toString("hex"); return same(h, u.hash); }
 const WORDS = "amber anchor apple arrow aspen badge basin beacon birch bison blaze bloom bluff brave brook cabin canal cedar cliff clover cobalt comet coral crane creek crest daisy delta drift eagle ember fable falcon fern field flint forest fox frost garden glade glow granite harbor hawk hazel heron hill holly iris island ivy jade juniper kettle lake lark laurel lemon lily linen maple marble meadow mesa mint moss north oak ocean olive onyx orbit otter owl pebble pine plume pond prairie quail quartz rain raven reed ridge river robin sage sail shore sky slate spruce stone summit sun swift thistle thunder tide timber trail tulip valley violet willow wren".split(" ");
 const tempPw = () => { const w = () => WORDS[randomBytes(2).readUInt16BE() % WORDS.length]; return `${w()}-${w()}-${10 + (randomBytes(1)[0] % 90)}`; };
-const publicUser = u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null });
+const publicUser = u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null, email: u.email || "", notify: prefs(u) });
+const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const cleanEmail = e => { const x = line(e, 120).toLowerCase(); if (x && !validEmail(x)) throw new HttpError(400, `“${x}” doesn't look like an email address.`); return x; };
 
 /* ---------- sessions: signed tokens ---------- */
 async function secret() {
@@ -121,12 +222,15 @@ function recompute(b) {
     } else if (!d.manual) d.status = "ok";
   }
 }
-function boardFor(b, u) {
-  const cutoff = Date.now() - 45 * DAY;
+function boardFor(b, u, sec) {
+  const cutoff = Date.now() - 45 * DAY, now = Date.now();
   let tickets = b.tickets.filter(t => t.state !== "fixed" || (t.closed || 0) > cutoff), rooms = b.rooms;
   // Teachers only see the rooms assigned to them (and tickets they wrote). Admins and techs see everything.
   if (u && u.role === "teacher") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
-  return { ...b, rooms, tickets: tickets.map(t => ({ ...t, unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
+  const pu = k => sec ? photoUrl(sec, k) : "";
+  return { ...b, rooms, notices: (b.notices || []).filter(n => !n.until || n.until > now),
+    tickets: tickets.map(t => ({ ...t, photos: (t.photos || []).map(pu), comments: (t.comments || []).map(c => c.photo ? { ...c, photo: pu(c.photo) } : c),
+      unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
 }
 async function log(by, text) { await mutate("log", () => ({ list: [] }), l => { l.list.unshift({ ts: Date.now(), by, text: clean(text, 300) }); l.list = l.list.slice(0, L.log); }); }
 
@@ -142,13 +246,19 @@ async function handle(req) {
   const url = new URL(req.url);
 
   // Wall display: read-only, by private key
+  if (req.method === "GET" && url.searchParams.get("photo")) {
+    const k = url.searchParams.get("photo");
+    if (!/^[a-z0-9]+\.(jpg|png|webp)$/.test(k) || !same(url.searchParams.get("s"), photoSig(await secret(), k))) throw new HttpError(404, "Not found.");
+    const buf = await (await photoStore()).get(k); if (!buf) throw new HttpError(404, "Not found.");
+    return new Response(buf, { headers: { "content-type": k.endsWith("png") ? "image/png" : k.endsWith("webp") ? "image/webp" : "image/jpeg", "cache-control": "private, max-age=604800" } });
+  }
   if (req.method === "GET") {
     const key = url.searchParams.get("display");
     if (!key) return json({ error: "Not found." }, 404);
     const meta = await read("meta", () => ({}));
     if (!(meta.displays || []).some(d => same(d.key, key))) { await sleep(500); throw new HttpError(403, "This display link isn't valid. Ask your admin for a new one."); }
     const b = upgrade(await read("board", blankBoard));
-    return json({ board: boardFor(b, null), display: true });
+    return json({ board: boardFor(b, null, null), display: true });
   }
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
   let body; try { body = await req.json(); } catch { throw new HttpError(400, "Bad request."); }
@@ -212,10 +322,31 @@ async function handle(req) {
     const users = await read("users", () => ({ list: [] }));
     let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
     if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
-    const out = { me: publicUser(me), board: boardFor(b, me), people, types: TYPES };
+    const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE() };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     if (me.role === "admin") { out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
     return json(out);
+  }
+
+  if (a === "updateMe") {
+    const email = body.email != null ? cleanEmail(body.email) : undefined, n = body.notify || {};
+    await mutate("users", () => ({ list: [] }), us => { const x = us.list.find(y => y.username === me.username); if (!x) return;
+      if (email !== undefined) x.email = email;
+      x.notify = { ...prefs(x), ...(["all", "down", "none"].includes(n.reports) && x.role !== "teacher" ? { reports: n.reports } : {}), ...(n.replies != null ? { replies: !!n.replies } : {}), ...(n.digest != null && x.role !== "teacher" ? { digest: !!n.digest } : {}) }; });
+    const fresh = (await read("users", () => ({ list: [] }))).list.find(y => y.username === me.username);
+    return json({ ok: true, user: publicUser(fresh) });
+  }
+  if (a === "testEmail") {
+    if (!mailReady()) throw new HttpError(400, "Email isn't set up yet. Add SMTP_USER and SMTP_PASS in Netlify, then redeploy.");
+    if (!me.email) throw new HttpError(400, "Add your email address first.");
+    try { await withTimeout(sendMail(me.email, "Test email from Room Tech Status", emailBody("Email alerts are working ✅", [`This is a test sent to ${me.email}.`], SITE(), "Open the board")), 12000); }
+    catch (e) { throw new HttpError(502, "The email didn't send: " + String(e.message || e).slice(0, 200)); }
+    return json({ ok: true });
+  }
+  if (a === "stats") {
+    if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can see reports.");
+    const b = upgrade(await read("board", blankBoard));
+    return json({ tickets: b.tickets.map(t => ({ id: t.id, room: t.room, device: t.device, severity: t.severity, state: t.state, opened: t.opened, closed: t.closed || null, by: t.byName || t.by, assignee: t.assignee || null, text: t.text })) });
   }
 
   /* ----- account admin ----- */
@@ -234,7 +365,8 @@ async function handle(req) {
           if (users.list.some(x => x.username === username) || made.some(m => m.username === username)) return { __abort: true, msg: `The username “${username}” is already taken.` };
           const role = ROLES.includes(r.role) ? r.role : "teacher";
           const pw = r.password && !pwProblem(r.password) ? r.password : tempPw();
-          const u = { username, name: line(r.name, L.name) || username, role, rooms: (r.rooms || []).filter(x => roomIds.has(x)).slice(0, 20), created: Date.now(), mustChange: true, tv: 0, ...hashPw(pw) };
+          let email = ""; try { email = r.email ? cleanEmail(r.email) : ""; } catch (e) { return { __abort: true, msg: e.message }; }
+          const u = { username, email, name: line(r.name, L.name) || username, role, rooms: (r.rooms || []).filter(x => roomIds.has(x)).slice(0, 20), created: Date.now(), mustChange: true, tv: 0, ...hashPw(pw) };
           users.list.push(u); made.push({ username, name: u.name, password: pw, role });
         }
       } else {
@@ -243,6 +375,7 @@ async function handle(req) {
         const otherAdmins = users.list.filter(x => x !== u && x.role === "admin" && !x.disabled).length;
         if (a === "updateUser") {
           if (body.name != null) u.name = line(body.name, L.name) || u.name;
+          if (body.email != null) { try { u.email = cleanEmail(body.email); } catch (e) { return { __abort: true, msg: e.message }; } }
           if (body.role != null && ROLES.includes(body.role)) { if (u.role === "admin" && body.role !== "admin" && !otherAdmins) return { __abort: true, msg: "Keep at least one admin account." }; u.role = body.role; }
           if (Array.isArray(body.rooms)) u.rooms = body.rooms.filter(x => roomIds.has(x)).slice(0, 20);
           if (body.disabled != null) { if (body.disabled && u.role === "admin" && !otherAdmins) return { __abort: true, msg: "Keep at least one admin account turned on." }; u.disabled = !!body.disabled; u.tv = (u.tv || 0) + 1; }
@@ -266,16 +399,23 @@ async function handle(req) {
 
   /* ----- board changes ----- */
   const manage = can(me, "manage");
-  let note = "", result = {};
+  let note = "", result = {}, job = null;
+  const photo = (a === "report" || a === "comment") && body.photo ? await savePhoto(body.photo) : null;
   const { v: b } = await mutate("board", blankBoard, b0 => {
-    const b = upgrade(b0); note = ""; result = {};
+    const b = upgrade(b0); note = ""; result = {}; job = null;
     const room = r => b.rooms.find(x => x.id === r);
     const dev = (r, d) => (room(r)?.devices || []).find(x => x.id === d);
     const tk = t => b.tickets.find(x => x.id === t);
     const need = ok => { if (!ok) throw new HttpError(403, "Your account can't do that."); };
     const mine = rid => me.role !== "teacher" || (me.rooms || []).includes(rid);
     const needRoom = rid => { if (!mine(rid)) throw new HttpError(403, "That room isn't assigned to your account."); };
-    const devFields = (d, src) => { for (const k of ["name", "model", "serial", "asset", "location"]) if (src[k] != null) d[k] = line(src[k], L.field); if (src.notes != null) d.notes = clean(src.notes, L.text); if (src.type != null && TYPES.includes(src.type)) d.type = src.type; };
+    const devFields = (d, src) => {
+      for (const k of ["name", "model", "serial", "asset", "location"]) if (src[k] != null) d[k] = line(src[k], L.field);
+      if (src.notes != null) d.notes = clean(src.notes, L.text); if (src.type != null && TYPES.includes(src.type)) d.type = src.type;
+      for (const k of ["purchased", "warranty"]) if (src[k] != null) { const v = String(src[k]).trim(); d[k] = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ""; if (k === "warranty" && d.warnW && d.warnW !== d.warranty) delete d.warnW; }
+      for (const k of ["lampHours", "lampLife"]) if (src[k] != null) { const v = Math.round(+src[k]); d[k] = src[k] === "" || !(v >= 0) ? 0 : Math.min(v, 200000); }
+      if (!(d.lampLife > 0 && d.lampHours >= d.lampLife * 0.9)) delete d.warnL;
+    };
     switch (a) {
       case "report": {
         const r = room(body.room), d = dev(body.room, body.device);
@@ -283,14 +423,15 @@ async function handle(req) {
         if (!mine(r.id)) throw new HttpError(403, "You can only report problems in rooms assigned to you.");
         const text = clean(body.text, L.text); if (!text) throw new HttpError(400, "Describe the problem.");
         if (b.tickets.length >= L.tickets) b.tickets = b.tickets.filter(t => t.state !== "fixed" || t.closed > Date.now() - 90 * DAY);
-        const t = { id: id(), room: r.id, device: d.id, text, by: me.username, byName: me.name, severity: body.severity === "down" ? "down" : "issue", state: "open", opened: Date.now(), updated: Date.now(), comments: [], seen: { [me.username]: Date.now() } };
-        d.manual = false; b.tickets.unshift(t); result.ticket = t.id; note = `Reported ${d.name || d.type} in ${r.name}`; break;
+        const t = { id: id(), room: r.id, device: d.id, text, by: me.username, byName: me.name, severity: body.severity === "down" ? "down" : "issue", state: "open", opened: Date.now(), updated: Date.now(), comments: [], photos: photo ? [photo] : [], seen: { [me.username]: Date.now() } };
+        d.manual = false; b.tickets.unshift(t); result.ticket = t.id; job = ["report", t.id]; note = `Reported ${d.name || d.type} in ${r.name}`; break;
       }
       case "comment": {
         const t = tk(body.ticket); if (!t) throw new HttpError(400, "That ticket no longer exists.");
         need(t.by === me.username || mine(t.room));
-        const text = clean(body.text, L.text); if (!text) throw new HttpError(400, "Write a message first.");
-        t.comments = (t.comments || []).concat({ by: me.username, byName: me.name, role: me.role, text, ts: Date.now() }).slice(-L.comments);
+        const text = clean(body.text, L.text); if (!text && !photo) throw new HttpError(400, "Write a message first.");
+        t.comments = (t.comments || []).concat({ by: me.username, byName: me.name, role: me.role, text, ts: Date.now(), ...(photo ? { photo } : {}) }).slice(-L.comments);
+        job = [me.role === "teacher" ? "teacherReply" : t.by === me.username ? null : "staffReply", t.id];
         t.updated = Date.now(); t.seen = { ...(t.seen || {}), [me.username]: Date.now() };
         if (t.state === "fixed" && !manage) { t.state = "open"; t.closed = null; t.comments.push({ by: "", byName: "Board", role: "system", text: "Reopened by a new message.", ts: Date.now() + 1 }); }
         note = `Messaged on a ticket in ${room(t.room)?.name || "a room"}`; break;
@@ -306,9 +447,18 @@ async function handle(req) {
         if (body.assignee !== undefined && manage) t.assignee = normUser(body.assignee) || null;
         t.comments = (t.comments || []).concat({ by: "", byName: me.name, role: "system", text: `${me.name} marked this ${label.toLowerCase()}.`, ts: Date.now() });
         if (t.state === "fixed") { const d = dev(t.room, t.device); if (d) d.manual = false; }
+        if (!own || manage) job = ["state", t.id];
         note = `Marked a ticket ${label.toLowerCase()} (${room(t.room)?.name || ""})`; break;
       }
       case "assign": { need(manage); const t = tk(body.ticket); if (!t) break; needRoom(t.room); t.assignee = normUser(body.assignee) || null; t.updated = Date.now(); note = "Changed who's handling a ticket"; break; }
+      case "addNotice": {
+        need(manage); const text = line(body.text, 200); if (!text) throw new HttpError(400, "Write what's happening.");
+        const until = +body.until; if (!(until > Date.now())) throw new HttpError(400, "Pick when it ends. It has to be in the future.");
+        b.notices = (b.notices || []).filter(n => !n.until || n.until > Date.now()).slice(-30);
+        b.notices.push({ id: id(), text, area: line(body.area, L.name), until: Math.min(until, Date.now() + 60 * DAY), by: me.username, byName: me.name, ts: Date.now() });
+        note = `Posted a notice: ${text}`; break;
+      }
+      case "delNotice": { need(manage); b.notices = (b.notices || []).filter(n => n.id !== body.id); note = "Removed a notice"; break; }
       case "school": need(me.role === "admin"); b.school = line(body.school, L.name); note = "Changed the school name"; break;
       case "addRoom": {
         need(manage); if (b.rooms.length >= L.rooms) throw new HttpError(400, "Room limit reached.");
@@ -337,5 +487,6 @@ async function handle(req) {
     recompute(b); b.updated = Date.now();
   });
   if (note) await log(me.username, note);
-  return json({ ok: true, ...result, board: boardFor(b.__abort ? upgrade(await read("board", blankBoard)) : b, me) });
+  if (job && job[0]) { try { await notify(job[0], b.tickets.find(t => t.id === job[1]), b, me); } catch (e) { console.error("notify failed", e); } }
+  return json({ ok: true, ...result, board: boardFor(b.__abort ? upgrade(await read("board", blankBoard)) : b, me, await secret()) });
 }

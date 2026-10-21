@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Room Tech Status Board by Davis Tech Support",
   "dependencies": {
-    "@netlify/blobs": "^11.1.5"
+    "@netlify/blobs": "^11.1.5",
+    "nodemailer": "^10.1.7"
   }
 }
