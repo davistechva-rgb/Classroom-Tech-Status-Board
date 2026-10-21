@@ -23,6 +23,23 @@ const TICKET_STATES = ["open", "progress", "waiting", "fixed"];
 const ROLES = ["admin", "tech", "teacher"];
 const L = { rooms: 400, devices: 60, tickets: 1500, comments: 100, users: 500, name: 60, text: 1000, field: 80, log: 400 };
 const DAY = 86400000;
+const LOAN_TYPES = ["Chromebook", "Laptop", "iPad", "Charger", "Hotspot", "Calculator", "Headphones", "Camera", "Projector", "Speaker", "Cable or adapter", "Other"];
+const DEFAULT_FIXES = {
+  "Projector": ["Press Source (or Input) on the remote and pick the input your laptop or computer is on.", "Check the HDMI cable is pushed in tight at both ends.", "Turn the projector off, wait 30 seconds, and turn it back on."],
+  "TV or display": ["Press Input or Source on the remote and pick the right HDMI.", "Check the cable is pushed in at both ends.", "Unplug the TV for 30 seconds, then plug it back in."],
+  "Interactive board": ["Check the board's input is set to the computer.", "Unplug and replug the USB touch cable from the computer.", "Restart the computer."],
+  "Document camera": ["Check the camera's light is on. If not, press its power button.", "Pick the document camera input on the projector or TV.", "Unplug the USB cable and plug it back in."],
+  "Computer": ["Restart the computer (Start > Power > Restart).", "Check the monitor's power light and cable.", "Try a different outlet or power strip."],
+  "Laptop": ["Plug in the charger and wait a few minutes.", "Hold the power button for 10 seconds, then turn it back on.", "Restart it."],
+  "Chromebook cart": ["Check the cart is plugged into the wall and its power switch is on.", "Make sure each Chromebook's charger is clicked in all the way.", "Try a different outlet."],
+  "iPad cart": ["Check the cart is plugged into the wall and switched on.", "Make sure each iPad's cable is pushed in all the way.", "Try a different outlet."],
+  "Printer": ["Check it has paper and no blinking lights.", "Turn the printer off and on.", "Cancel stuck jobs and print again."],
+  "Speakers or sound": ["Check the volume on the computer and on the speakers.", "Make sure the right speaker is picked in the computer's sound settings.", "Unplug the audio cable and plug it back in."],
+  "Microphone": ["Check the mic is on and its battery is charged.", "Check it isn't muted on the receiver or computer."],
+  "Phone": ["Check the cord from the phone to the wall is pushed in.", "Unplug the phone's network cable for 10 seconds, then plug it back in."],
+  "Wi-Fi access point": ["Turn your device's Wi-Fi off and on.", "Try moving closer to the hallway or another room.", "Check whether others nearby have the same problem."],
+  "Camera": ["Check the camera is plugged in and its light is on.", "Restart the app or computer that uses it."],
+  "Other": [] };
 const PHOTO_MAX = 2500000;
 
 /* ---------- storage ---------- */
@@ -171,14 +188,19 @@ export async function runDaily(now = Date.now()) {
   }
   const monday = new Date(now).getUTCDay() === 1;
   const stale = monday ? b0.tickets.filter(t => t.state !== "fixed" && now - t.opened > 7 * DAY) : [];
-  if (!items.length && !stale.length) return { sent: 0, items: 0 };
+  const L0 = await read("loans", () => ({ items: [], loans: [] }));
+  const overdue = (L0.loans || []).filter(l => !l.back && l.due && l.due < now);
+  const newOver = overdue.filter(l => !l.warned), showOver = monday ? overdue : newOver;
+  if (!items.length && !stale.length && !showOver.length) return { sent: 0, items: 0 };
   const users = (await read("users", () => ({ list: [] }))).list.filter(u => !u.disabled && u.email && prefs(u).digest);
   const nm = id => { const r = b0.rooms.find(x => x.id === id.room), d = r && r.devices.find(x => x.id === id.device); return `${r ? r.name : "?"}: ${d ? d.name || d.type : "?"}`; };
-  const lines = [...items.map(i => i.text), ...(stale.length ? [`${stale.length} ticket${stale.length === 1 ? " has" : "s have"} been open more than a week:`, ...stale.slice(0, 15).map(t => `• ${nm(t)}, opened ${new Date(t.opened).toDateString()}`)] : [])];
-  const subject = items.length ? `Heads up: ${items.length} warranty or lamp reminder${items.length === 1 ? "" : "s"}` : `${stale.length} ticket${stale.length === 1 ? "" : "s"} open more than a week`;
+  const itemName = id => { const it = (L0.items || []).find(x => x.id === id); return it ? it.name + (it.asset ? ` (${it.asset})` : "") : "a loaner"; };
+  const lines = [...items.map(i => i.text), ...(showOver.length ? [`${showOver.length} loaner${showOver.length === 1 ? " is" : "s are"} overdue:`, ...showOver.slice(0, 20).map(l => `• ${itemName(l.item)} with ${l.to}, due ${new Date(l.due).toDateString()}`)] : []), ...(stale.length ? [`${stale.length} ticket${stale.length === 1 ? " has" : "s have"} been open more than a week:`, ...stale.slice(0, 15).map(t => `• ${nm(t)}, opened ${new Date(t.opened).toDateString()}`)] : [])];
+  const subject = !items.length && !stale.length ? `${showOver.length} overdue loaner${showOver.length === 1 ? "" : "s"}` : items.length ? `Heads up: ${items.length} warranty or lamp reminder${items.length === 1 ? "" : "s"}` : `${stale.length} ticket${stale.length === 1 ? "" : "s"} open more than a week`;
   await mailMany(users.map(u => [u.email, subject, emailBody(subject, lines, SITE() ? SITE() + "/#/reports" : "", "Open reports")]));
   if (users.length && items.length) await mutate("board", blankBoard, b => { for (const i of items) { const r = b.rooms.find(x => x.id === i.r), d = r && r.devices.find(x => x.id === i.d); if (!d) continue; if (i.k === "W") d.warnW = d.warranty; else d.warnL = true; } });
-  return { sent: users.length, items: items.length, stale: stale.length };
+  if (users.length && newOver.length) await mutate("loans", () => ({ items: [], loans: [] }), x => { for (const l of x.loans) if (newOver.some(o => o.id === l.id)) l.warned = true; });
+  return { sent: users.length, items: items.length, stale: stale.length, overdue: showOver.length };
 }
 
 /* ---------- helpers ---------- */
@@ -404,6 +426,10 @@ async function handle(req) {
     if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
     const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE(), google: !!GOOGLE_ID() };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
+    out.fixes = { ...DEFAULT_FIXES, ...(b.fixes || {}) }; out.loanTypes = LOAN_TYPES;
+    const LN = await read("loans", () => ({ items: [], loans: [] }));
+    if (can(me, "manage")) { out.loans = LN; out.walks = (await read("walks", () => ({ list: [] }))).list.slice(0, 30); }
+    else { const mine = (LN.loans || []).filter(l => l.toUser === me.username && !l.back); out.loans = { items: (LN.items || []).filter(i => mine.some(l => l.item === i.id)), loans: mine }; }
     if (me.role === "admin") { const meta = await read("meta", () => ({})); out.signin = { google: !!GOOGLE_ID(), domain: GOOGLE_DOMAIN(), autoCreate: !!meta.googleAutoCreate }; out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
     return json(out);
   }
@@ -426,7 +452,7 @@ async function handle(req) {
   if (a === "stats") {
     if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can see reports.");
     const b = upgrade(await read("board", blankBoard));
-    return json({ tickets: b.tickets.map(t => ({ id: t.id, room: t.room, device: t.device, severity: t.severity, state: t.state, opened: t.opened, closed: t.closed || null, by: t.byName || t.by, assignee: t.assignee || null, text: t.text })) });
+    return json({ tickets: b.tickets.map(t => ({ id: t.id, room: t.room, device: t.device, severity: t.severity, state: t.state, opened: t.opened, closed: t.closed || null, by: t.byName || t.by, assignee: t.assignee || null, text: t.text })), selfFixed: (await read("selffix", () => ({ list: [] }))).list });
   }
 
   /* ----- account admin ----- */
@@ -476,6 +502,96 @@ async function handle(req) {
     await log(me.username, body.googleAutoCreate ? "Let new staff join with Google" : "Turned off joining with Google");
     return json({ ok: true });
   }
+  /* ----- quick fixes ----- */
+  if (a === "selfFixed") {
+    const b = await read("board", blankBoard); const r = b.rooms.find(x => x.id === body.room), d = r && r.devices.find(x => x.id === body.device);
+    if (!d) throw new HttpError(400, "That device no longer exists.");
+    await mutate("selffix", () => ({ list: [] }), x => { x.list.unshift({ ts: Date.now(), room: r.id, device: d.id, type: d.type, by: me.username }); x.list = x.list.slice(0, 3000); });
+    await log(me.username, `Fixed ${d.name || d.type} in ${r.name} with a quick fix`);
+    return json({ ok: true });
+  }
+  if (a === "setFixes") {
+    if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can edit quick fixes.");
+    if (!TYPES.includes(body.type)) throw new HttpError(400, "Unknown device type.");
+    const steps = (Array.isArray(body.steps) ? body.steps : []).map(x => line(x, 240)).filter(Boolean).slice(0, 8);
+    const { v } = await mutate("board", blankBoard, b => { b.fixes = b.fixes || {}; if (body.reset) delete b.fixes[body.type]; else b.fixes[body.type] = steps; });
+    await log(me.username, `Updated the quick fixes for ${body.type}`);
+    return json({ ok: true, fixes: { ...DEFAULT_FIXES, ...(v.fixes || {}) } });
+  }
+
+  /* ----- loaners ----- */
+  if (["loanItemAdd", "loanItemEdit", "loanItemDel", "checkout", "checkin", "loanDel"].includes(a)) {
+    if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can manage loaners.");
+    const users = (await read("users", () => ({ list: [] }))).list;
+    let note = "";
+    const { v } = await mutate("loans", () => ({ items: [], loans: [] }), x => {
+      x.items = x.items || []; x.loans = x.loans || []; note = "";
+      const item = id => x.items.find(i => i.id === id);
+      const fields = (it, src) => { for (const k of ["name", "asset", "serial"]) if (src[k] != null) it[k] = line(src[k], L.field); if (src.notes != null) it.notes = clean(src.notes, L.text); if (src.type != null) it.type = LOAN_TYPES.includes(src.type) ? src.type : "Other"; };
+      if (a === "loanItemAdd") {
+        const rows = (Array.isArray(body.items) ? body.items : []).slice(0, 300); if (x.items.length + rows.length > 2000) return { __abort: true, msg: "Loaner limit reached." };
+        for (const r of rows) { const it = { id: id(), type: "Other", name: "", status: "in", created: Date.now() }; fields(it, r); if (!it.name) continue; if (it.asset && x.items.some(o => o.asset && o.asset.toLowerCase() === it.asset.toLowerCase())) return { __abort: true, msg: `Asset tag ${it.asset} is already on the list.` }; x.items.push(it); }
+        note = `Added ${rows.length} loaner${rows.length === 1 ? "" : "s"}`;
+      } else if (a === "loanItemEdit") {
+        const it = item(body.id); if (!it) return { __abort: true, msg: "That loaner no longer exists." }; fields(it, body);
+        if (body.status && ["in", "repair", "retired"].includes(body.status) && it.status !== "out") it.status = body.status; note = `Updated the loaner ${it.name}`;
+      } else if (a === "loanItemDel") {
+        const it = item(body.id); if (!it) return; if (it.status === "out") return { __abort: true, msg: "Check it in before removing it." };
+        x.items = x.items.filter(i => i !== it); note = `Removed the loaner ${it.name}`;
+      } else if (a === "checkout") {
+        const it = item(body.item); if (!it) return { __abort: true, msg: "That loaner no longer exists." };
+        if (it.status === "out") return { __abort: true, msg: `${it.name} is already checked out.` };
+        if (it.status === "retired") return { __abort: true, msg: `${it.name} is retired.` };
+        const to = line(body.to, L.name); if (!to) return { __abort: true, msg: "Who is borrowing it?" };
+        const toUser = users.some(u => u.username === body.toUser) ? body.toUser : null;
+        const due = +body.due || null;
+        x.loans.unshift({ id: id(), item: it.id, to, toUser, by: me.username, byName: me.name, out: Date.now(), due, notes: clean(body.notes, 300), back: null });
+        x.loans = x.loans.filter((l, i) => !l.back || i < 6000);
+        it.status = "out"; note = `Checked out ${it.name} to ${to}`;
+      } else if (a === "checkin") {
+        const l = x.loans.find(o => o.id === body.loan && !o.back); if (!l) return { __abort: true, msg: "That loan is already checked in." };
+        const it = item(l.item); l.back = Date.now(); l.backBy = me.name; l.condition = ["good", "damaged", "missing"].includes(body.condition) ? body.condition : "good"; l.backNotes = clean(body.notes, 300);
+        if (it) { it.status = l.condition === "good" ? "in" : "repair"; note = `Checked in ${it.name} from ${l.to}${l.condition !== "good" ? ` (${l.condition === "damaged" ? "damaged" : "missing parts"})` : ""}`; }
+      } else if (a === "loanDel") { x.loans = x.loans.filter(l => !(l.id === body.loan && l.back)); }
+    });
+    if (v.__abort) throw new HttpError(400, v.msg);
+    if (note) await log(me.username, note);
+    return json({ ok: true, loans: v });
+  }
+
+  /* ----- walkthroughs ----- */
+  if (["walkStart", "walkMark", "walkFinish", "walkDel"].includes(a)) {
+    if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can run walkthroughs.");
+    let ticketId = null, note = "";
+    if (a === "walkMark" && body.ok === false) {
+      const text = clean(body.note, L.text) || "Problem found during a room walkthrough.";
+      const walks0 = await read("walks", () => ({ list: [] })); const w0 = walks0.list.find(w => w.id === body.walk);
+      const prev = w0 && w0.results && w0.results[body.device];
+      if (prev && prev.ticket && prev.ok === false) ticketId = prev.ticket; // already reported in this walkthrough
+      else {
+        const { v: b } = await mutate("board", blankBoard, b0 => { const b = upgrade(b0); const r = b.rooms.find(x => x.id === body.room), d = r && r.devices.find(x => x.id === body.device);
+          if (!d) throw new HttpError(400, "That device no longer exists.");
+          const t = { id: id(), room: r.id, device: d.id, text: `${text} (Found during the walkthrough “${w0 ? w0.name : ""}”.)`, by: me.username, byName: me.name, severity: body.severity === "down" ? "down" : "issue", state: "open", opened: Date.now(), updated: Date.now(), comments: [], photos: [], seen: { [me.username]: Date.now() }, fromWalk: body.walk };
+          d.manual = false; b.tickets.unshift(t); ticketId = t.id; recompute(b); b.updated = Date.now(); });
+        const t = b.tickets.find(x => x.id === ticketId); try { await notify("report", t, b, me); } catch {}
+      }
+    }
+    const { v } = await mutate("walks", () => ({ list: [] }), x => {
+      x.list = x.list || []; note = "";
+      if (a === "walkStart") { const name = line(body.name, L.name) || "Room walkthrough"; const rooms = Array.isArray(body.rooms) ? body.rooms.slice(0, L.rooms) : [];
+        if (!rooms.length) return { __abort: true, msg: "Pick at least one room." };
+        const w = { id: id(), name, rooms, results: {}, started: Date.now(), by: me.username, byName: me.name, done: null }; x.list.unshift(w); x.list = x.list.slice(0, 60); note = `Started the walkthrough “${name}”`; return { id: w.id }; }
+      const w = x.list.find(o => o.id === body.walk); if (!w) return { __abort: true, msg: "That walkthrough no longer exists." };
+      if (a === "walkMark") { if (body.clear) delete w.results[body.device]; else w.results[body.device] = { ok: !!body.ok, note: clean(body.note, 300), by: me.name, ts: Date.now(), ...(ticketId ? { ticket: ticketId } : {}) }; }
+      if (a === "walkFinish") { w.done = body.reopen ? null : Date.now(); note = `${body.reopen ? "Reopened" : "Finished"} the walkthrough “${w.name}”`; }
+      if (a === "walkDel") { x.list = x.list.filter(o => o !== w); note = `Deleted the walkthrough “${w.name}”`; }
+    });
+    if (v.__abort) throw new HttpError(400, v.msg);
+    if (note) await log(me.username, note);
+    const b = upgrade(await read("board", blankBoard));
+    return json({ ok: true, walks: v.list.slice(0, 30), id: v.list[0] && a === "walkStart" ? v.list[0].id : undefined, ticket: ticketId, board: boardFor(b, me, await secret()) });
+  }
+
   if (a === "addDisplay" || a === "deleteDisplay") {
     if (me.role !== "admin") throw new HttpError(403, "Only an admin can manage display links.");
     await mutate("meta", () => ({}), m => { m.displays = m.displays || []; if (a === "addDisplay") m.displays.push({ id: id(), name: line(body.name, L.name) || "Display", key: randomBytes(18).toString("base64url"), created: Date.now() }); else m.displays = m.displays.filter(d => d.id !== body.id); });
