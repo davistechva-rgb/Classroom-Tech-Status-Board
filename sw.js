@@ -1,5 +1,5 @@
 /* Offline support. Bump VERSION whenever you change files so devices pick up the update. */
-const VERSION="room-status-board-v4";
+const VERSION="room-status-board-v5";
 const CORE=["./", "index.html", "manifest.webmanifest", "assets/logo-mark.png", "assets/logo-mark-white.png", "assets/favicon-64.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(VERSION).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==VERSION).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));

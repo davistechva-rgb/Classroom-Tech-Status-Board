@@ -195,7 +195,7 @@ function hashPw(pw, salt = randomBytes(16).toString("hex")) { return { salt, has
 function checkPw(pw, u) { if (!u || !u.hash) return false; const h = scryptSync(String(pw), u.salt, 32, { N: 16384, r: 8, p: 1 }).toString("hex"); return same(h, u.hash); }
 const WORDS = "amber anchor apple arrow aspen badge basin beacon birch bison blaze bloom bluff brave brook cabin canal cedar cliff clover cobalt comet coral crane creek crest daisy delta drift eagle ember fable falcon fern field flint forest fox frost garden glade glow granite harbor hawk hazel heron hill holly iris island ivy jade juniper kettle lake lark laurel lemon lily linen maple marble meadow mesa mint moss north oak ocean olive onyx orbit otter owl pebble pine plume pond prairie quail quartz rain raven reed ridge river robin sage sail shore sky slate spruce stone summit sun swift thistle thunder tide timber trail tulip valley violet willow wren".split(" ");
 const tempPw = () => { const w = () => WORDS[randomBytes(2).readUInt16BE() % WORDS.length]; return `${w()}-${w()}-${10 + (randomBytes(1)[0] % 90)}`; };
-const publicUser = u => ({ hasPw: !!u.hash, username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null, email: u.email || "", notify: prefs(u) });
+const publicUser = u => ({ hasPw: !!u.hash, google: u.google ? { email: u.google.email || u.email || "", since: u.google.first || null, last: u.google.last || null } : null, username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null, email: u.email || "", notify: prefs(u) });
 const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const cleanEmail = e => { const x = line(e, 120).toLowerCase(); if (x && !validEmail(x)) throw new HttpError(400, `“${x}” doesn't look like an email address.`); return x; };
 
@@ -243,7 +243,7 @@ async function verifyGoogle(cred) {
   if (pay.aud !== GOOGLE_ID() || !["accounts.google.com", "https://accounts.google.com"].includes(pay.iss) || !(pay.exp > now - 60) || (pay.iat && pay.iat > now + 300)) throw bad();
   if (!pay.email || pay.email_verified === false || pay.email_verified === "false") throw bad("Your Google account's email isn't verified.");
   const dom = GOOGLE_DOMAIN(); if (dom && String(pay.hd || "").toLowerCase() !== dom) throw bad(`Use your ${dom} Google account to sign in.`);
-  return { email: String(pay.email).toLowerCase(), name: pay.name || "", hd: pay.hd || "" };
+  return { email: String(pay.email).toLowerCase(), name: pay.name || "", hd: pay.hd || "", sub: String(pay.sub || "") };
 }
 const can = (u, what) => u && (u.role === "admin" || (what === "manage" && u.role === "tech"));
 
@@ -334,7 +334,7 @@ async function handle(req) {
         if (us.list.length >= L.users) return { __abort: true, msg: "Account limit reached." };
         const base = g.email.split("@")[0].toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 28) || "user"; let un = validUser(base) ? base : "u" + base, n = 2;
         while (us.list.some(x => x.username === un)) un = base + n++;
-        us.list.push({ username: un, name: line(g.name, L.name) || un, email: g.email, role: "teacher", rooms: [], created: Date.now(), mustChange: false, tv: 0, viaGoogle: true });
+        us.list.push({ username: un, name: line(g.name, L.name) || un, email: g.email, role: "teacher", rooms: [], created: Date.now(), mustChange: false, tv: 0, viaGoogle: true, google: { sub: g.sub, email: g.email, first: Date.now(), last: Date.now() } });
       });
       if (v.__abort) throw new HttpError(400, v.msg);
       u = (await read("users", () => ({ list: [] }))).list.find(x => x.email && x.email.toLowerCase() === g.email);
@@ -342,8 +342,9 @@ async function handle(req) {
     }
     if (u.disabled) throw new HttpError(401, "This account is turned off. Ask your admin.");
     const token = await sign({ u: u.username, v: u.tv || 0, exp: Date.now() + (body.remember === false ? 1 : 30) * DAY });
-    await mutate("users", () => ({ list: [] }), us => { const x = us.list.find(y => y.username === u.username); if (x) { x.lastLogin = Date.now(); x.mustChange = false; } });
-    return json({ token, user: publicUser({ ...u, mustChange: false }) });
+    let fresh = u;
+    await mutate("users", () => ({ list: [] }), us => { const x = us.list.find(y => y.username === u.username); if (x) { const now = Date.now(); x.lastLogin = now; x.mustChange = false; x.google = { sub: g.sub, email: g.email, first: (x.google && x.google.first) || now, last: now }; fresh = x; } });
+    return json({ token, user: publicUser(fresh) });
   }
 
   if (a === "setup" || a === "recover") {
@@ -401,7 +402,7 @@ async function handle(req) {
     const users = await read("users", () => ({ list: [] }));
     let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
     if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
-    const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE() };
+    const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE(), google: !!GOOGLE_ID() };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     if (me.role === "admin") { const meta = await read("meta", () => ({})); out.signin = { google: !!GOOGLE_ID(), domain: GOOGLE_DOMAIN(), autoCreate: !!meta.googleAutoCreate }; out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
     return json(out);
