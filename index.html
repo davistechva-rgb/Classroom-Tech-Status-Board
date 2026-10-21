@@ -186,6 +186,13 @@ details.upkeep{margin-top:16px;border:1px solid var(--line);border-radius:12px;p
 .dlg .kv{grid-template-columns:118px 1fr}
 .gwrap h2{margin-bottom:14px}.gbtn{display:flex;justify-content:center;min-height:44px}
 .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:16px 0 6px}.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.sm-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:99px;padding:2px 9px;font-size:.8rem;font-weight:600;white-space:nowrap;margin:2px 0;background:#fff}
+.sm-chip svg{width:13px;height:13px}.sm-chip.g{border-color:#C9DBFB;background:#F2F7FF}.sm-chip.wait{background:var(--issue-bg);border-color:#F2D49A;color:#8A5A00}.sm-chip.off{color:var(--muted);border-style:dashed}
+.sm-chip.off svg{filter:grayscale(1);opacity:.55}
+.gicon{vertical-align:-2px}
+.gstat{display:flex;align-items:center;gap:12px;border:1px dashed var(--line);border-radius:12px;padding:10px 14px;margin:6px 0 4px}.gstat.on{border-style:solid;border-color:#C9DBFB;background:#F2F7FF}
+.gstat b{display:block;font-size:.95rem}.gstat span{color:var(--muted);font-size:.85rem}.gstat:not(.on) svg{filter:grayscale(1);opacity:.55}
+td.sin{min-width:150px}
 
 </style>
 </head>
@@ -367,6 +374,7 @@ function qrDlg(){const rs=S.board.rooms.slice().sort((a,b)=>a.name.localeCompare
 function settingsDlg(){const m=S.me,n=m.notify||{},staff=m.role!=="teacher";
  const d=dlg(`<form class="dlg" id="fSet" novalidate><h2>My settings</h2>
   ${S.mail?"":`<div class="banner">Email alerts aren't turned on for this board yet. ${isAdmin()?"Add the Microsoft 365 settings in Netlify (the README shows how), then redeploy.":"Your admin can turn them on."} You can still save your email now.</div>`}
+  ${googleStatus(m,true)}
   <label class="l" for="se">My email</label><input id="se" name="email" type="email" autocomplete="email" value="${esc(m.email||"")}" placeholder="name@school.org">
   <h3 style="margin:18px 0 6px;font-size:1rem">Email me when…</h3>
   ${staff?`<label class="l" for="sr" style="margin-top:4px">Someone reports a problem</label><select id="sr" name="reports"><option value="all" ${n.reports==="all"?"selected":""}>Every report</option><option value="down" ${n.reports==="down"?"selected":""}>Only when something is “Not working”</option><option value="none" ${n.reports==="none"?"selected":""}>Never</option></select>`:""}
@@ -385,6 +393,16 @@ function noticeDlg(){const areas=[...new Set(S.board.rooms.map(x=>x.area).filter
   <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Post notice</button></div></form>`);
  bindForm($("#fN"),async fd=>{const u=new Date(fd.get("until")).getTime();await act("addNotice",{text:fd.get("text"),area:fd.get("area"),until:u},"Notice posted");d.close()})}
 function noticesHtml(list,canDel){return (list||[]).map(n=>`<div class="notice"><span class="ni">📢</span><div><b>${esc(n.text)}</b><div class="nm2">${n.area?esc(n.area)+" · ":""}until ${new Date(n.until).toLocaleString(undefined,{weekday:"short",hour:"numeric",minute:"2-digit"})} · ${esc(n.byName||"")}</div></div>${canDel?`<button class="btn sm" type="button" data-delnote="${n.id}" aria-label="Remove notice">${ui("x")}</button>`:""}</div>`).join("")}
+const GICON=(w=16)=>`<svg class="gicon" viewBox="0 0 48 48" width="${w}" height="${w}" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.2-13.4-9.9l-8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>`;
+function signinCell(u){const g=u.google,parts=[];
+ if(g)parts.push(`<span class="sm-chip g" title="Google sign-in set up${g.since?" "+new Date(g.since).toLocaleDateString():""}${g.last?" · last used "+ago(g.last):""}">${GICON(14)} Google</span>`);
+ if(u.hasPw&&!u.mustChange)parts.push(`<span class="sm-chip" title="Has their own password">${ui("key",2)} Password</span>`);
+ if(u.mustChange)parts.push(`<span class="sm-chip wait" title="Has a temporary password and hasn't signed in yet">${ui("key",2)} Temporary</span>`);
+ if(!g&&S.google&&u.email)parts.push(`<span class="sm-chip off" title="Hasn't used Sign in with Google yet">${GICON(14)} Not yet</span>`);
+ return parts.join(" ")||'<span class="hint">None</span>'}
+function googleStatus(u,self){const g=u.google;if(!S.google&&!g)return"";
+ return `<div class="gstat ${g?"on":""}">${GICON(20)}<div>${g?`<b>Google sign-in is set up</b><span>${esc(g.email||u.email||"")}${g.last?` · last used ${ago(g.last)}`:""}</span>`
+  :`<b>Google sign-in not set up yet</b><span>${u.email?`${self?"You":"They"} can tap <i>Sign in with Google</i> with ${esc(u.email)}.`:`Add ${self?"your":"their"} Google email so ${self?"you":"they"} can use <i>Sign in with Google</i>.`}</span>`}</div></div>`}
 /* ===================== SHELL ===================== */
 async function start(){$("#auth").hidden=true;$("#app").hidden=false;
  try{const ok=await load();if(!ok)return}catch(e){$("#view").innerHTML=`<div class="banner bad">${esc(e.msg)}</div>`;return}
@@ -540,8 +558,8 @@ function roomPicker(sel){return`<div class="typegrid" style="grid-template-colum
 function peopleView(v){if(!isAdmin()){v.innerHTML=`<div class="empty">Only an admin can manage accounts.</div>`;return}
  const us=S.users.slice().sort((a,b)=>(a.disabled-b.disabled)||a.name.localeCompare(b.name));
  v.innerHTML=`<div class="ph"><div><h1>People</h1><p>Give each person an account and their rooms. Teachers only see the rooms assigned to them. Techs and admins see every room. People choose their own password the first time they sign in.</p></div><div class="tools" style="margin:0"><button class="btn" type="button" id="bulk">${ui("users")} Add many at once</button><button class="btn dk" type="button" id="addP">${ui("plus")} Add a person</button></div></div>
- <div class="card" style="overflow-x:auto"><table class="t"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Rooms</th><th>Last signed in</th><th></th></tr></thead><tbody>
- ${us.map(u=>`<tr class="${u.disabled?"off":""}"><td><b>${esc(u.name)}</b>${u.email?`<div class="hint" style="margin:0">${esc(u.email)}</div>`:""}${u.mustChange?`<div class="hint" style="margin:0">Hasn't set a password yet</div>`:!u.hasPw?`<div class="hint" style="margin:0">Signs in with Google</div>`:""}${u.disabled?`<div class="hint" style="margin:0">Turned off</div>`:""}</td><td>${esc(u.username)}</td><td><span class="role ${u.role}">${ROLE[u.role]}</span></td><td>${esc(u.rooms.map(id=>(room(id)||{}).name).filter(Boolean).join(", "))||'<span class="hint">None</span>'}</td><td>${u.lastLogin?ago(u.lastLogin):'<span class="hint">Never</span>'}</td><td><button class="btn sm" type="button" data-u="${esc(u.username)}">Edit</button></td></tr>`).join("")}</tbody></table></div>
+ <div class="card" style="overflow-x:auto"><table class="t"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Rooms</th><th>Signs in with</th><th>Last signed in</th><th></th></tr></thead><tbody>
+ ${us.map(u=>`<tr class="${u.disabled?"off":""}"><td><b>${esc(u.name)}</b>${u.google?` <span title="Google sign-in set up">${GICON(14)}</span>`:""}${u.email?`<div class="hint" style="margin:0">${esc(u.email)}</div>`:""}${u.disabled?`<div class="hint" style="margin:0">Turned off</div>`:""}</td><td>${esc(u.username)}</td><td><span class="role ${u.role}">${ROLE[u.role]}</span></td><td>${esc(u.rooms.map(id=>(room(id)||{}).name).filter(Boolean).join(", "))||'<span class="hint">None</span>'}</td><td class="sin">${signinCell(u)}</td><td>${u.lastLogin?ago(u.lastLogin):'<span class="hint">Never</span>'}</td><td><button class="btn sm" type="button" data-u="${esc(u.username)}">Edit</button></td></tr>`).join("")}</tbody></table></div>
  <div class="card pad" style="margin-top:18px"><h3 style="margin:0 0 6px"><svg viewBox="0 0 48 48" width="18" height="18" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.2-13.4-9.9l-8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Sign in with Google</h3>
   ${S.signin&&S.signin.google?`<p class="hint" style="margin-top:0">On${S.signin.domain?` for <b>${esc(S.signin.domain)}</b> Google accounts`:""}. People sign in with Google when their account's email matches their Google email. Usernames and passwords still work too.</p>
   <label class="chk"><input type="checkbox" id="gAuto" ${S.signin.autoCreate?"checked":""}> Let staff without an account join by signing in with Google. They start as teachers with no rooms until you assign some.</label>`
@@ -558,6 +576,7 @@ const dispUrl=k=>location.origin+location.pathname.replace(/index\.html$/,"")+"?
 function personForm(u){const d=dlg(`<form class="dlg" id="fP" novalidate><h2>${u?esc(u.name):"Add a person"}</h2>
   <div class="g2"><div><label class="l" for="pn">Full name</label><input id="pn" name="name" maxlength="60" required value="${esc(u?u.name:"")}" placeholder="Jane Allen"></div>
   <div><label class="l" for="pu">Username</label><input id="pu" name="username" maxlength="32" autocapitalize="none" spellcheck="false" ${u?"disabled":""} value="${esc(u?u.username:"")}" placeholder="jallen"></div></div>
+  ${u?googleStatus(u,false):""}
   <label class="l" for="pe">Email (for alerts, optional)</label><input id="pe" name="email" type="email" value="${esc(u&&u.email||"")}" placeholder="name@school.org">
   <label class="l" for="pr">Role</label><select id="pr" name="role">${Object.entries(ROLE).map(([k,n])=>`<option value="${k}" ${(u?u.role:"teacher")===k?"selected":""}>${n}${k==="admin"?" (every room, plus accounts)":k==="tech"?" (every room, devices, and tickets)":" (only their assigned rooms)"}</option>`).join("")}</select>
   <label class="l">Rooms</label>${roomPicker(u?u.rooms:[])}
