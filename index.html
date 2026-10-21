@@ -211,6 +211,14 @@ td.sin{min-width:150px}
 .wbtns{display:flex;gap:8px}.wbtns button{width:56px;height:56px;border-radius:14px;border:2px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--muted)}.wbtns svg{width:26px;height:26px}
 .wok.on{background:var(--ok);border-color:var(--ok);color:#fff}.wbad.on{background:var(--down);border-color:var(--down);color:#fff}.wok:hover{border-color:var(--ok);color:var(--ok)}.wbad:hover{border-color:var(--down);color:var(--down)}
 .wok.on:hover,.wbad.on:hover{color:#fff}
+/* unifi */
+.ustat{margin-top:10px;padding:8px 12px;border-radius:10px;background:#F4F6FA;font-size:.92rem}.ustat.u-online{background:var(--ok-bg)}.ustat.u-offline{background:var(--down-bg);color:#8A1F19}.ustat.u-missing{background:var(--issue-bg)}
+.utable{display:grid;gap:6px;max-height:55vh;overflow:auto;padding-right:4px}
+.urow{display:grid;grid-template-columns:14px minmax(0,1fr) minmax(180px,260px);gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 10px}.urow[hidden]{display:none}
+.urow .un small{display:block;color:var(--muted)}.urow select{padding:7px 10px;min-height:0}
+.udot{width:12px;height:12px;border-radius:50%;background:#aab}.udot.online{background:var(--ok)}.udot.offline{background:var(--down);box-shadow:0 0 0 4px var(--down-bg)}
+.sugg{color:var(--repair);font-weight:700}
+@media (max-width:640px){.urow{grid-template-columns:14px 1fr}.urow select{grid-column:1/-1}}
 
 </style>
 </head>
@@ -251,6 +259,7 @@ const ICON={
 "Speakers or sound": "<path d=\"M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14\" /> <path d=\"M9 14a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /> <path d=\"M12 7l0 .01\" />",
 "Microphone": "<path d=\"M9 5a3 3 0 0 1 3 -3a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3l0 -5\" /> <path d=\"M5 10a7 7 0 0 0 14 0\" /> <path d=\"M8 21l8 0\" /> <path d=\"M12 17l0 4\" />",
 "Phone": "<path d=\"M20 3h-2a2 2 0 0 0 -2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-14a2 2 0 0 0 -2 -2\" /> <path d=\"M16 4h-11a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h11\" /> <path d=\"M12 8h-6v3h6l0 -3\" /> <path d=\"M12 14v.01\" /> <path d=\"M9 14v.01\" /> <path d=\"M6 14v.01\" /> <path d=\"M12 17v.01\" /> <path d=\"M9 17v.01\" /> <path d=\"M6 17v.01\" />",
+"Network switch": "<path d=\"M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z\" /> <path d=\"M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z\" /> <path d=\"M7 8v.01\" /> <path d=\"M7 16v.01\" /> <path d=\"M11 8h6\" /> <path d=\"M11 16h6\" />",
 "Wi-Fi access point": "<path d=\"M12 18l.01 0\" /> <path d=\"M9.172 15.172a4 4 0 0 1 5.656 0\" /> <path d=\"M6.343 12.343a8 8 0 0 1 11.314 0\" /> <path d=\"M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0\" />",
 "Camera": "<path d=\"M3 4a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1l0 -2\" /> <path d=\"M8 14a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\" /> <path d=\"M19 7v7a7 7 0 0 1 -14 0v-7\" /> <path d=\"M12 14l.01 0\" />",
 "Other": "<path d=\"M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5\" />"
@@ -410,6 +419,21 @@ function fixesDlg(type){type=type||S.types[0];const cur=(S.fixes||{})[type]||[];
  $$('#fFx input[name=type]').forEach(r=>r.onchange=()=>fixesDlg(r.value));
  bindForm($("#fFx"),async fd=>{const j=await api("setFixes",{type,steps:String(fd.get("steps")||"").split(/\n/).map(x=>x.trim()).filter(Boolean)});S.fixes=j.fixes;toast("Quick fixes saved")});
  $("#fxReset").onclick=async()=>{const j=await api("setFixes",{type,reset:true});S.fixes=j.fixes;fixesDlg(type);toast("Back to the built-in steps")}}
+async function unifiDlg(fresh){const d=dlg(`<div class="dlg"><h2>📡 UniFi</h2><p class="hint">Loading devices from UniFi…</p></div>`,"wide");let j;
+ try{j=await api(fresh?"unifiCheck":"unifiList",{fresh:!!fresh});if(j.board){S.board=j.board}}catch(e){d.innerHTML=`<div class="dlg"><h2>📡 UniFi</h2><div class="banner bad">${esc(e.msg)}</div><div class="foot"><button class="btn" type="button" data-close>Close</button></div></div>`;$$("[data-close]",d).forEach(b=>b.onclick=()=>d.close());return}
+ const U=j.devices.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));const rs=S.board.rooms.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+ const linked=m=>{for(const r of rs)for(const x of r.devices)if(x.unifi===m)return{r,x};return null};
+ const guess=u=>{const n=u.name.toLowerCase();let best=null;for(const r of rs){const rn=r.name.toLowerCase(),num=(rn.match(/\d{2,4}/)||[])[0];if(n.includes(rn)||(num&&new RegExp("(^|\\D)"+num+"(\\D|$)").test(n))){const ap=r.devices.find(x=>!x.unifi&&(x.type==="Wi-Fi access point"||x.type==="Network switch"));best=ap?"dev:"+ap.id:"new:"+r.id;break}}return best};
+ const opts=(sel)=>`<option value="">Not on the board</option>${rs.map(r=>`<optgroup label="${esc(r.name)}">${r.devices.filter(x=>x.type==="Wi-Fi access point"||x.type==="Network switch"||x.unifi).map(x=>`<option value="dev:${x.id}" ${sel==="dev:"+x.id?"selected":""}>${esc(dName(x))}</option>`).join("")}<option value="new:${r.id}" ${sel==="new:"+r.id?"selected":""}>+ Add it to ${esc(r.name)}</option></optgroup>`).join("")}`;
+ const rows=U.map(u=>{const l=linked(u.mac);const g=l?null:guess(u);return{u,cur:l?"dev:"+l.x.id:"",sel:l?"dev:"+l.x.id:g||"",sug:!!g}});
+ d.innerHTML=`<form class="dlg" id="fUn"><h2>📡 UniFi devices</h2><p class="hint" style="margin-top:0">${U.length} devices from UniFi · checked ${j.ts?ago(j.ts):"just now"}. Link each access point or switch to a device on the board. When UniFi says one is offline for two checks in a row (about 10 minutes), its tile turns red and a ticket opens. The ticket closes itself when it comes back. <b>Suggested</b> links are guesses from the names, so check them before saving.</p>
+  <div class="tools"><input type="search" id="unQ" placeholder="Filter by name or model" aria-label="Filter"><button class="btn sm" type="button" id="unNow">↻ Check now</button></div>
+  <div class="utable">${rows.map((x,i)=>`<div class="urow" data-i="${i}"><span class="udot ${x.u.status}" title="${x.u.status}"></span><div class="un"><b>${esc(x.u.name)}</b><small>${esc(x.u.model)}${x.u.ip?" · "+esc(x.u.ip):""}${x.u.host?" · "+esc(x.u.host):""}${x.sug?' · <span class="sugg">Suggested</span>':""}</small></div><select data-mac="${x.u.mac}" aria-label="Link ${esc(x.u.name)}">${opts(x.sel)}</select></div>`).join("")||'<p class="hint">UniFi didn\'t return any devices.</p>'}</div>
+  <p class="err" role="alert"></p><div class="foot"><button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">Save links</button></div></form>`;
+ $$("[data-close]",d).forEach(b=>b.onclick=()=>d.close());$("#unNow").onclick=()=>unifiDlg(true);
+ $("#unQ").oninput=e=>{const q=e.target.value.toLowerCase();$$(".urow",d).forEach(r=>{const x=rows[+r.dataset.i];r.hidden=!!q&&!`${x.u.name} ${x.u.model} ${x.u.ip}`.toLowerCase().includes(q)})};
+ bindForm($("#fUn"),async()=>{const links=[];$$("#fUn select[data-mac]").forEach(s=>{const x=rows.find(r=>r.u.mac===s.dataset.mac);if(s.value===x.cur)return;const[k,v]=s.value.split(":");links.push(k==="dev"?{mac:x.u.mac,device:v}:k==="new"?{mac:x.u.mac,room:v}:{mac:x.u.mac,unlink:true})});
+  if(!links.length){d.close();return}const r=await api("unifiLink",{links});S.board=r.board;toast(`${links.length} link${links.length===1?"":"s"} saved`);d.close();route()})}
 function noticeDlg(){const areas=[...new Set(S.board.rooms.map(x=>x.area).filter(Boolean))];const t=new Date();t.setHours(15,30,0,0);if(t<new Date())t.setDate(t.getDate()+1);
  const loc=x=>new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,16);
  const d=dlg(`<form class="dlg" id="fN" novalidate><h2>Post a notice</h2><p class="hint" style="margin-top:0">Shows at the top of everyone's board and on wall displays, so people know before they report it.</p>
@@ -464,14 +488,14 @@ function wireTiles(root){$$(".tile[data-d]",root).forEach(b=>b.onclick=()=>devic
 function boardView(v){const all=S.board.rooms.flatMap(r=>r.devices.map(d=>({r,d})));const c=k=>all.filter(x=>x.d.status===k).length;
  const areas=[...new Set(S.board.rooms.map(r=>r.area||"").filter(Boolean))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
  v.innerHTML=`<div class="ph"><div><h1>${esc(S.board.school||"All rooms")}</h1><p>${S.board.rooms.length} rooms · ${all.length} devices · updated ${ago(lastOk)}</p></div>
-  <div class="tools" style="margin:0">${isManager()?`<button class="btn dk" type="button" id="addRoom">${ui("plus")} Add a room</button>`:""}${isManager()?`<button class="btn" type="button" id="postNotice">📢 Post a notice</button><button class="btn" type="button" id="qfixBtn">💡 Quick fixes</button>`:""}${isAdmin()?`<button class="btn" type="button" id="setSchool">School name</button>`:""}</div></div>
+  <div class="tools" style="margin:0">${isManager()?`<button class="btn dk" type="button" id="addRoom">${ui("plus")} Add a room</button>`:""}${isManager()?`<button class="btn" type="button" id="postNotice">📢 Post a notice</button><button class="btn" type="button" id="qfixBtn">💡 Quick fixes</button>${S.unifi?`<button class="btn" type="button" id="unifiBtn">📡 UniFi</button>`:""}`:""}${isAdmin()?`<button class="btn" type="button" id="setSchool">School name</button>`:""}</div></div>
  <div class="stats">${[["down","Not working"],["issue","Has a problem"],["repair","Being fixed"],["ok","Working"]].map(([k,n])=>`<button class="stat s-${k}" type="button" data-st="${k}" aria-pressed="${filt.st===k}"><span class="si">${ui(k,2)}</span><span><b>${c(k)}</b><span>${n}</span></span></button>`).join("")}</div>
  <div class="tools"><input type="search" id="q" placeholder="Search rooms, teachers, or devices" value="${esc(filt.q)}" aria-label="Search">${areas.length?`<select id="area" aria-label="Area"><option value="">All areas</option>${areas.map(a=>`<option ${filt.area===a?"selected":""}>${esc(a)}</option>`).join("")}</select>`:""}${filt.st?`<button class="btn sm" id="clr" type="button">Show everything</button>`:""}</div>
  <div id="roomsOut"></div>`;
  drawRooms();
  $$(".stat",v).forEach(b=>b.onclick=()=>{filt.st=filt.st===b.dataset.st?"":b.dataset.st;boardView(v)});
  $("#q").oninput=e=>{filt.q=e.target.value;drawRooms()};if($("#area"))$("#area").onchange=e=>{filt.area=e.target.value;drawRooms()};if($("#clr"))$("#clr").onclick=()=>{filt.st="";boardView(v)};
- if($("#addRoom"))$("#addRoom").onclick=()=>roomForm();if($("#postNotice"))$("#postNotice").onclick=noticeDlg;if($("#qfixBtn"))$("#qfixBtn").onclick=()=>fixesDlg();
+ if($("#addRoom"))$("#addRoom").onclick=()=>roomForm();if($("#postNotice"))$("#postNotice").onclick=noticeDlg;if($("#qfixBtn"))$("#qfixBtn").onclick=()=>fixesDlg();if($("#unifiBtn"))$("#unifiBtn").onclick=()=>unifiDlg();
  if($("#setSchool"))$("#setSchool").onclick=async()=>{const n=prompt("School name shown at the top:",S.board.school||"");if(n!=null)await act("school",{school:n},"Saved")}}
 function drawRooms(){const out=$("#roomsOut");const q=filt.q.trim().toLowerCase();
  const list=S.board.rooms.filter(r=>!filt.area||r.area===filt.area).map(r=>{const tn=teachersOf(r.id).map(t=>t.name).join(" ");
@@ -550,6 +574,7 @@ function deviceDlg(rid,did){const r=room(rid),x=devOf(rid,did);if(!x)return;cons
  const d=dlg(`<div class="dlg"><div class="devhead"><span class="t-${x.status}">${icon(x.type)}</span><div><h2>${esc(dName(x))}</h2><p class="hint" style="margin:2px 0 0">${esc(r.name)}${r.area?` · ${esc(r.area)}`:""} · ${esc(x.type)}</p><span class="pill p-${x.status==="ok"?"fixed":x.status==="repair"?"progress":"open"} sev-${x.status}" style="margin-top:6px">${DS[x.status]}</span>${x.statusNote?` <span class="hint">${esc(x.statusNote)}</span>`:""}</div></div>
   ${x.model||x.serial||x.asset||x.location||(mgr&&x.notes)?`<dl class="kv" style="margin-top:16px">${x.model?`<dt>Model</dt><dd>${esc(x.model)}</dd>`:""}${x.serial?`<dt>Serial</dt><dd>${esc(x.serial)}</dd>`:""}${x.asset?`<dt>Asset tag</dt><dd>${esc(x.asset)}</dd>`:""}${x.location?`<dt>Where</dt><dd>${esc(x.location)}</dd>`:""}${mgr&&x.notes?`<dt>Notes</dt><dd style="white-space:pre-wrap">${esc(x.notes)}</dd>`:""}</dl>`:""}
   ${x.purchased||x.warranty||x.lampLife?`<dl class="kv" style="margin-top:10px">${x.purchased?`<dt>Purchased</dt><dd>${esc(x.purchased)}</dd>`:""}${x.warranty?`<dt>Warranty ends</dt><dd>${esc(x.warranty)}</dd>`:""}${x.lampLife?`<dt>Lamp</dt><dd>${x.lampHours||0} of ${x.lampLife} hours<div class="lampbar"><i style="width:${Math.min(100,(x.lampHours||0)/x.lampLife*100)}%"></i></div></dd>`:""}</dl>`:""}
+  ${x.unifi?`<div class="ustat u-${x.unifiStatus||"unknown"}">📡 <b>UniFi:</b> ${x.unifiStatus==="online"?"Online":x.unifiStatus==="offline"?"Offline":x.unifiStatus==="missing"?"Not found in UniFi":"Waiting for the first check"}${x.unifiModel?` · ${esc(x.unifiModel)}`:""}${x.unifiIp&&mgr?` · ${esc(x.unifiIp)}`:""}${x.unifiSeen?` · checked ${ago(x.unifiSeen)}`:""}</div>`:""}
   ${mgr&&upkeep(x).length?`<div style="margin-top:8px">${upkeep(x).map(w=>`<span class="pill up-${w[1]}">⏳ ${esc(w[0])}</span> `).join("")}</div>`:""}
   <h3 style="margin:18px 0 0;font-size:1rem">${op.length?`Open tickets (${op.length})`:"History"}</h3><div class="hist">${hist.length?hist.slice(0,12).map(t=>`<a href="#/t/${t.id}" data-go><span><b>${t.state==="fixed"?"Fixed":TS[t.state]}</b> · ${esc(t.text.slice(0,70))}${t.text.length>70?"…":""}</span><span class="hint" style="margin:0;white-space:nowrap">${ago(t.updated||t.opened)}</span></a>`).join(""):`<p class="hint">No problems reported for this device yet.</p>`}</div>
   <div class="foot"><button class="btn" type="button" data-close>Close</button>${mgr?`<button class="btn" type="button" id="dEdit">${ui("edit")} Edit details</button>`:""}<button class="btn red" type="button" id="dRep">Report a problem</button></div></div>`);
@@ -563,6 +588,7 @@ function deviceForm(rid,did){const r=room(rid),x=did?devOf(rid,did):null;const t
   <div><label class="l" for="da">Asset tag</label><input id="da" name="asset" maxlength="80" value="${esc(x&&x.asset||"")}" placeholder="FS-0142"></div></div>
   <label class="l" for="dl">Where in the room (optional)</label><input id="dl" name="location" maxlength="80" value="${esc(x&&x.location||"")}" placeholder="Ceiling mount, front">
   <label class="l" for="dno">Notes (only you and techs see these)</label><textarea id="dno" name="notes" maxlength="1000">${esc(x&&x.notes||"")}</textarea>
+  ${S.unifi?`<label class="l" for="dun">UniFi device (optional)</label><select id="dun" name="unifi"><option value="${esc(x&&x.unifi||"")}">${x&&x.unifi?"Loading…":"Not linked"}</option></select><p class="hint">Link an access point or switch so the board turns it red and opens a ticket when UniFi says it's offline.</p>`:""}
   <details class="upkeep" ${x&&(x.purchased||x.warranty||x.lampLife)?"open":""}><summary>Warranty and upkeep</summary>
   <div class="g2"><div><label class="l" for="dpu">Purchased</label><input id="dpu" name="purchased" type="date" value="${esc(x&&x.purchased||"")}"></div>
   <div><label class="l" for="dwa">Warranty ends</label><input id="dwa" name="warranty" type="date" value="${esc(x&&x.warranty||"")}"></div>
@@ -573,6 +599,8 @@ function deviceForm(rid,did){const r=room(rid),x=did?devOf(rid,did):null;const t
    <label class="l" for="dsn">Status note shown to staff (optional)</label><input id="dsn" name="statusNote" maxlength="160" value="${esc(x.statusNote||"")}" placeholder="Replacement lamp ordered, back Friday">
    <label class="l" for="dmv">Room</label><select id="dmv" name="moveTo">${S.board.rooms.map(o=>`<option value="${o.id}" ${o.id===rid?"selected":""}>${esc(o.name)}</option>`).join("")}</select>`:""}
   <p class="err" role="alert"></p><div class="foot">${x?`<button class="btn" type="button" id="dDel" style="margin-right:auto;color:var(--down)">${ui("trash")} Remove</button>`:""}<button class="btn" type="button" data-close>Cancel</button><button class="btn dk" type="submit">${x?"Save":"Add device"}</button></div></form>`,"wide");
+ if($("#dun"))api("unifiList").then(j=>{const sel=$("#dun");if(!sel)return;const cur=x&&x.unifi||"";const nm=(x&&x.name||"")+" "+r.name;
+   sel.innerHTML=`<option value="">Not linked</option>`+j.devices.slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(u=>`<option value="${u.mac}" ${u.mac===cur?"selected":""}>${esc(u.name)}${u.model?" · "+esc(u.model):""} · ${u.status==="online"?"online":"OFFLINE"}</option>`).join("")}).catch(e=>{const sel=$("#dun");if(sel)sel.innerHTML=`<option value="${esc(x&&x.unifi||"")}">Couldn't load UniFi: ${esc(e.msg||"")}</option>`});
  bindForm($("#fDev"),async fd=>{const o=Object.fromEntries(fd.entries());if(x){const statusChanged=o.status!==x.status||o.statusNote!==(x.statusNote||"");if(!statusChanged){delete o.status;delete o.statusNote}await act("editDevice",{room:rid,device:did,...o},"Saved")}else await act("addDevice",{room:rid,...o},"Device added");d.close()});
  if($("#dDel"))$("#dDel").onclick=async()=>{if(!confirm(`Remove ${dName(x)} and its ticket history?`))return;await act("delDevice",{room:rid,device:did},"Removed");d.close()}}
 function roomForm(r){const areas=[...new Set(S.board.rooms.map(x=>x.area).filter(Boolean))];
