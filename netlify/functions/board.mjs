@@ -8,10 +8,12 @@
 //     SMTP_USER + SMTP_PASS  for example a Gmail address and a Google app password (SMTP_HOST / SMTP_PORT for other providers)
 //     RESEND_API_KEY + MAIL_FROM  a Resend.com key and a verified sender address
 //   MAIL_NAME (optional) the sender name on alerts. Default: Room Tech Status
+//   Sign in with Google (optional): GOOGLE_CLIENT_ID (a Web client ID from Google Cloud), and GOOGLE_DOMAIN to only allow one
+//     Google Workspace domain (for example fuquaschool.org).
 //
 // All requests go to /api/board. GET ?display=<key> serves the read-only wall display, GET ?photo=<id>&s=<sig> serves a photo.
 // Everything else is POST {action, ...} with "Authorization: Bearer <session token>" once signed in.
-import { scryptSync, randomBytes, createHmac, timingSafeEqual } from "node:crypto";
+import { scryptSync, randomBytes, createHmac, timingSafeEqual, createPublicKey, verify as rsaVerify } from "node:crypto";
 
 export const config = { path: "/api/board" };
 
@@ -193,7 +195,7 @@ function hashPw(pw, salt = randomBytes(16).toString("hex")) { return { salt, has
 function checkPw(pw, u) { if (!u || !u.hash) return false; const h = scryptSync(String(pw), u.salt, 32, { N: 16384, r: 8, p: 1 }).toString("hex"); return same(h, u.hash); }
 const WORDS = "amber anchor apple arrow aspen badge basin beacon birch bison blaze bloom bluff brave brook cabin canal cedar cliff clover cobalt comet coral crane creek crest daisy delta drift eagle ember fable falcon fern field flint forest fox frost garden glade glow granite harbor hawk hazel heron hill holly iris island ivy jade juniper kettle lake lark laurel lemon lily linen maple marble meadow mesa mint moss north oak ocean olive onyx orbit otter owl pebble pine plume pond prairie quail quartz rain raven reed ridge river robin sage sail shore sky slate spruce stone summit sun swift thistle thunder tide timber trail tulip valley violet willow wren".split(" ");
 const tempPw = () => { const w = () => WORDS[randomBytes(2).readUInt16BE() % WORDS.length]; return `${w()}-${w()}-${10 + (randomBytes(1)[0] % 90)}`; };
-const publicUser = u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null, email: u.email || "", notify: prefs(u) });
+const publicUser = u => ({ hasPw: !!u.hash, username: u.username, name: u.name, role: u.role, rooms: u.rooms || [], disabled: !!u.disabled, mustChange: !!u.mustChange, created: u.created, lastLogin: u.lastLogin || null, email: u.email || "", notify: prefs(u) });
 const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const cleanEmail = e => { const x = line(e, 120).toLowerCase(); if (x && !validEmail(x)) throw new HttpError(400, `“${x}” doesn't look like an email address.`); return x; };
 
@@ -218,6 +220,30 @@ async function currentUser(req) {
   const u = users.list.find(x => x.username === s.u);
   if (!u || u.disabled || (u.tv || 0) !== s.v) return null;
   return u;
+}
+/* ---------- Sign in with Google: verify the ID token Google gives the browser ---------- */
+const GOOGLE_ID = () => (process.env.GOOGLE_CLIENT_ID || "").trim();
+const GOOGLE_DOMAIN = () => (process.env.GOOGLE_DOMAIN || "").trim().toLowerCase().replace(/^@/, "");
+let _gk = { keys: null, exp: 0 };
+async function googleKeys(force) {
+  if (!force && _gk.keys && _gk.exp > Date.now()) return _gk.keys;
+  const r = await fetch(process.env.GOOGLE_CERTS_URL || "https://www.googleapis.com/oauth2/v3/certs");
+  if (!r.ok) throw new HttpError(502, "Couldn't reach Google to check the sign-in. Try again.");
+  const j = await r.json(), ma = +((/max-age=(\d+)/.exec(r.headers.get("cache-control") || "") || [0, 3600])[1]);
+  _gk = { keys: j.keys || [], exp: Date.now() + Math.min(ma, 86400) * 1000 }; return _gk.keys;
+}
+async function verifyGoogle(cred) {
+  const bad = m => new HttpError(401, m || "Google sign-in didn't work. Try again.");
+  const [h, p, sig] = String(cred || "").split("."); if (!h || !p || !sig) throw bad();
+  let head, pay; try { head = JSON.parse(Buffer.from(h, "base64url")); pay = JSON.parse(Buffer.from(p, "base64url")); } catch { throw bad(); }
+  if (head.alg !== "RS256" || !head.kid) throw bad();
+  let k = (await googleKeys()).find(x => x.kid === head.kid); if (!k) k = (await googleKeys(true)).find(x => x.kid === head.kid); if (!k) throw bad();
+  if (!rsaVerify("RSA-SHA256", Buffer.from(h + "." + p), createPublicKey({ key: k, format: "jwk" }), Buffer.from(sig, "base64url"))) throw bad();
+  const now = Date.now() / 1000;
+  if (pay.aud !== GOOGLE_ID() || !["accounts.google.com", "https://accounts.google.com"].includes(pay.iss) || !(pay.exp > now - 60) || (pay.iat && pay.iat > now + 300)) throw bad();
+  if (!pay.email || pay.email_verified === false || pay.email_verified === "false") throw bad("Your Google account's email isn't verified.");
+  const dom = GOOGLE_DOMAIN(); if (dom && String(pay.hd || "").toLowerCase() !== dom) throw bad(`Use your ${dom} Google account to sign in.`);
+  return { email: String(pay.email).toLowerCase(), name: pay.name || "", hd: pay.hd || "" };
 }
 const can = (u, what) => u && (u.role === "admin" || (what === "manage" && u.role === "tech"));
 
@@ -294,7 +320,31 @@ async function handle(req) {
   const a = body.action;
 
   /* ----- signed-out actions ----- */
-  if (a === "status") { const users = await read("users", () => ({ list: [] })); return json({ needsSetup: !users.list.some(u => u.role === "admin" && !u.disabled) }); }
+  if (a === "status") { const users = await read("users", () => ({ list: [] })); return json({ needsSetup: !users.list.some(u => u.role === "admin" && !u.disabled), googleClientId: GOOGLE_ID() || null, googleDomain: GOOGLE_DOMAIN() || null }); }
+
+  if (a === "google") {
+    if (!GOOGLE_ID()) throw new HttpError(400, "Google sign-in isn't turned on for this board.");
+    const g = await verifyGoogle(body.credential);
+    const meta = await read("meta", () => ({}));
+    let u = (await read("users", () => ({ list: [] }))).list.find(x => x.email && x.email.toLowerCase() === g.email);
+    if (!u) {
+      if (!meta.googleAutoCreate) throw new HttpError(403, `No board account uses ${g.email}. Ask your admin to add that email to your account on the People page.`);
+      const { v } = await mutate("users", () => ({ list: [] }), us => {
+        if (us.list.some(x => x.email && x.email.toLowerCase() === g.email)) return;
+        if (us.list.length >= L.users) return { __abort: true, msg: "Account limit reached." };
+        const base = g.email.split("@")[0].toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 28) || "user"; let un = validUser(base) ? base : "u" + base, n = 2;
+        while (us.list.some(x => x.username === un)) un = base + n++;
+        us.list.push({ username: un, name: line(g.name, L.name) || un, email: g.email, role: "teacher", rooms: [], created: Date.now(), mustChange: false, tv: 0, viaGoogle: true });
+      });
+      if (v.__abort) throw new HttpError(400, v.msg);
+      u = (await read("users", () => ({ list: [] }))).list.find(x => x.email && x.email.toLowerCase() === g.email);
+      await log(u.username, `Joined with Google (${g.email})`);
+    }
+    if (u.disabled) throw new HttpError(401, "This account is turned off. Ask your admin.");
+    const token = await sign({ u: u.username, v: u.tv || 0, exp: Date.now() + (body.remember === false ? 1 : 30) * DAY });
+    await mutate("users", () => ({ list: [] }), us => { const x = us.list.find(y => y.username === u.username); if (x) { x.lastLogin = Date.now(); x.mustChange = false; } });
+    return json({ token, user: publicUser({ ...u, mustChange: false }) });
+  }
 
   if (a === "setup" || a === "recover") {
     await throttle("pin");
@@ -334,9 +384,9 @@ async function handle(req) {
   if (!me) throw new HttpError(401, "Please sign in again.", { signin: true });
 
   if (a === "changePassword") {
-    if (!checkPw(body.current, me)) { await sleep(500); throw new HttpError(400, "Your current password isn't right."); }
+    if (me.hash && !checkPw(body.current, me)) { await sleep(500); throw new HttpError(400, "Your current password isn't right."); }
     const p = pwProblem(body.next); if (p) throw new HttpError(400, p);
-    if (same(body.current, body.next)) throw new HttpError(400, "Pick a new password that's different from the old one.");
+    if (me.hash && same(body.current, body.next)) throw new HttpError(400, "Pick a new password that's different from the old one.");
     let token;
     await mutate("users", () => ({ list: [] }), us => { const x = us.list.find(y => y.username === me.username); Object.assign(x, hashPw(body.next), { mustChange: false, tv: (x.tv || 0) + 1 }); });
     const fresh = (await read("users", () => ({ list: [] }))).list.find(y => y.username === me.username);
@@ -353,7 +403,7 @@ async function handle(req) {
     if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
     const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE() };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
-    if (me.role === "admin") { out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
+    if (me.role === "admin") { const meta = await read("meta", () => ({})); out.signin = { google: !!GOOGLE_ID(), domain: GOOGLE_DOMAIN(), autoCreate: !!meta.googleAutoCreate }; out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
     return json(out);
   }
 
@@ -419,6 +469,12 @@ async function handle(req) {
     return json({ ok: true, created: made });
   }
 
+  if (a === "signinSettings") {
+    if (me.role !== "admin") throw new HttpError(403, "Only an admin can change sign-in settings.");
+    await mutate("meta", () => ({}), m => { m.googleAutoCreate = !!body.googleAutoCreate; });
+    await log(me.username, body.googleAutoCreate ? "Let new staff join with Google" : "Turned off joining with Google");
+    return json({ ok: true });
+  }
   if (a === "addDisplay" || a === "deleteDisplay") {
     if (me.role !== "admin") throw new HttpError(403, "Only an admin can manage display links.");
     await mutate("meta", () => ({}), m => { m.displays = m.displays || []; if (a === "addDisplay") m.displays.push({ id: id(), name: line(body.name, L.name) || "Display", key: randomBytes(18).toString("base64url"), created: Date.now() }); else m.displays = m.displays.filter(d => d.id !== body.id); });

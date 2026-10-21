@@ -5,6 +5,7 @@ A shared board that shows whether the tech in every classroom is working: projec
 Made by [Davis Tech Support](https://davis-tech-support.com) in Farmville, Virginia.
 
 ## Features
+- **Sign in with Google** (optional) for schools on Google Workspace, alongside usernames and passwords.
 - **Accounts:** the admin creates accounts (one at a time or many at once) and prints login slips with a temporary password. Each person chooses their own password the first time they sign in and can change it any time. Forgotten passwords are reset by an admin.
 - **Three roles:** *Teacher* only sees the rooms assigned to them on the People page, and reports problems there. *Tech* sees every room and manages rooms, devices, and tickets. *Admin* sees everything and also manages accounts.
 - **My room:** each teacher is assigned one or more rooms and lands on them when they sign in.
@@ -47,6 +48,16 @@ The board sends email through Microsoft Graph, the method Microsoft supports now
 **Other email services:** set `SMTP_USER` and `SMTP_PASS` (plus `SMTP_HOST` and `SMTP_PORT`) for a regular SMTP server, or `RESEND_API_KEY` and `MAIL_FROM` for Resend.com. `MAIL_NAME` changes the sender name (the default is Room Tech Status).
 
 The morning heads-up email runs every day at 7 AM Eastern from `netlify/functions/daily.mjs`. It only sends when something needs attention.
+
+### Turn on Sign in with Google (optional)
+Teachers can tap **Sign in with Google** instead of typing a password. The board matches their Google email to the email on their account (People → Edit), so add everyone's email first.
+
+1. Go to **console.cloud.google.com**, signed in with your school Google Workspace account. Create a project named "Room Tech Status".
+2. Open **Google Auth Platform** (or APIs & Services > OAuth consent screen) and press **Get started**. App name: Room Tech Status. Pick your support email. Under **Audience**, choose **Internal**, so only accounts in your school can use it. Finish and press **Create**.
+3. Go to **Clients > Create client**. Application type: **Web application**. Under **Authorized JavaScript origins**, add your board's address, for example `https://classroom-tech-board.netlify.app` (add your custom domain too if you have one). No redirect URI is needed. Press **Create** and copy the **Client ID**, which ends in `.apps.googleusercontent.com`. You don't need the client secret.
+4. In Netlify, add `GOOGLE_CLIENT_ID` (the Client ID) and `GOOGLE_DOMAIN` (your Google Workspace domain, for example `fuquaschool.org`). Leave **Contains secret values** unchecked for both, then redeploy.
+
+The sign-in page now shows a Google button above the username form. On the People page, the **Sign in with Google** card can let staff who don't have an account yet join on their own. They start as teachers with no rooms until you assign some. Usernames and passwords keep working either way.
 
 ### Upgrading from version 1
 Your rooms, devices, and open reports carry over. `STAFF_CODE` is no longer used, so you can delete it. Keep `ADMIN_PIN`.
