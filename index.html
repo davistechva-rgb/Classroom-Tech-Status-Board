@@ -184,6 +184,8 @@ details.upkeep{margin-top:16px;border:1px solid var(--line);border-radius:12px;p
 .hb{display:grid;grid-template-columns:minmax(80px,140px) 1fr 34px;align-items:center;gap:10px;margin:7px 0}.hb span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.hb i{height:14px;border-radius:99px;background:linear-gradient(90deg,var(--accent),#FF8A7F);display:block}.hb b{text-align:right}
 .wall .wn{background:#3A2E0B;color:#FFE19A;border-radius:2vh;padding:1.2vh 2vh;margin-bottom:2vh;font-size:2.4vh}.wall .wn div+div{margin-top:.6vh}
 .dlg .kv{grid-template-columns:118px 1fr}
+.gwrap h2{margin-bottom:14px}.gbtn{display:flex;justify-content:center;min-height:44px}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;margin:16px 0 6px}.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
 
 </style>
 </head>
@@ -261,14 +263,22 @@ async function api(action,data={}){const h={"content-type":"application/json"};i
 function authShell(inner){$("#app").hidden=true;$("#wall").hidden=true;const a=$("#auth");a.hidden=false;
  a.innerHTML=`<div class="box"><div class="brand"><img src="assets/logo-mark.png" alt="Davis Tech Support"><div><h1>Room Tech Status</h1><span>Classroom tech, room by room</span></div></div>${inner}</div>`}
 function bindForm(f,fn){f.addEventListener("submit",async e=>{e.preventDefault();const b=$("button[type=submit]",f),er=$(".err",f);if(b)b.disabled=true;if(er)er.textContent="";try{await fn(new FormData(f))}catch(x){if(er)er.textContent=x.msg||String(x)}if(b)b.disabled=false})}
+let GS=null;
+function loadGIS(){return window.google&&google.accounts?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://accounts.google.com/gsi/client";sc.async=true;sc.onload=res;sc.onerror=()=>rej();document.head.appendChild(sc)})}
+async function googleButton(){const box=$("#gbtn");if(!box)return;box.innerHTML='<span class="hint">Loading Google sign-in…</span>';
+ try{await loadGIS()}catch(e){box.innerHTML='<span class="hint">Google sign-in couldn\'t load. Use your username below.</span>';return}
+ google.accounts.id.initialize({client_id:GS.googleClientId,ux_mode:"popup",auto_select:false,cancel_on_tap_outside:true,...(GS.googleDomain?{hd:GS.googleDomain}:{}),
+  callback:async r=>{const er=$("#gerr");if(er)er.textContent="";try{remember=true;const j=await api("google",{credential:r.credential,remember:true});saveTok(j.token);S={me:j.user};toast("Signed in");start()}catch(e){if($("#gerr"))$("#gerr").textContent=e.msg||"Google sign-in didn't work."}}});
+ box.innerHTML="";google.accounts.id.renderButton(box,{theme:"outline",size:"large",shape:"pill",text:"signin_with",width:Math.min(340,box.clientWidth||320),logo_alignment:"center"})}
 async function auth(mode){
- if(mode==="login"){authShell(`<form id="fLogin" novalidate><h2>Sign in</h2><label class="l" for="lu">Username</label><input id="lu" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+ if(mode==="login"){if(!GS){try{GS=await api("status")}catch(e){GS={}}}
+  authShell(`${GS.googleClientId?`<div class="gwrap"><h2>Sign in</h2><div id="gbtn" class="gbtn"></div><p class="err" id="gerr" role="alert"></p><div class="or"><span>or use your username</span></div></div>`:""}<form id="fLogin" novalidate>${GS.googleClientId?"":"<h2>Sign in</h2>"}<label class="l" for="lu">Username</label><input id="lu" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
   <label class="l" for="lp">Password</label><input id="lp" name="p" type="password" autocomplete="current-password" required>
   <label class="chk" style="margin-top:14px"><input type="checkbox" name="r" ${remember?"checked":""}> Keep me signed in on this device</label>
   <p class="err" role="alert"></p><button class="btn dk full" type="submit">Sign in</button>
   <p class="alt">Forgot your password? Ask your tech person to reset it.<br><button type="button" id="toRecover">Admin recovery</button></p></form>`);
   bindForm($("#fLogin"),async fd=>{remember=!!fd.get("r");const j=await api("login",{username:fd.get("u"),password:fd.get("p"),remember});saveTok(j.token);if(j.user.mustChange){S={me:j.user};auth("change")}else start()});
-  $("#toRecover").onclick=()=>auth("recover");return}
+  $("#toRecover").onclick=()=>auth("recover");if(GS.googleClientId)googleButton();return}
  if(mode==="setup"){authShell(`<form id="fSetup" novalidate><h2>Welcome! Let's set up your board.</h2><p class="hint">Create your admin account. You'll need the <b>ADMIN_PIN</b> you added in Netlify.</p>
   <label class="l" for="sp">Setup PIN (your ADMIN_PIN)</label><input id="sp" name="pin" type="password" required autofocus>
   <label class="l" for="sn">Your name</label><input id="sn" name="name" autocomplete="name" required>
@@ -285,6 +295,13 @@ async function auth(mode){
   <p class="err" role="alert"></p><button class="btn dk full" type="submit">Set new password</button><p class="alt"><button type="button" id="toLogin">Back to sign in</button></p></form>`);
   bindForm($("#fRec"),async fd=>{await api("recover",{pin:fd.get("pin"),username:fd.get("u"),password:fd.get("p")});toast("Password set. Sign in now.");auth("login");$("#lu").value=fd.get("u")});
   $("#toLogin").onclick=()=>auth("login");return}
+ if(mode==="change"&&S&&S.me&&S.me.hasPw===false){
+  authShell(`<form id="fPw" novalidate><h2>Set a password</h2><p class="hint">You sign in with Google, so this is optional. A password lets you sign in with your username too.</p>
+  <label class="l" for="pn">New password</label><input id="pn" name="n" type="password" autocomplete="new-password" required autofocus><p class="hint">At least 8 characters.</p>
+  <label class="l" for="pn2">Type it again</label><input id="pn2" name="n2" type="password" autocomplete="new-password" required>
+  <p class="err" role="alert"></p><button class="btn dk full" type="submit">Save my password</button><p class="alt"><button type="button" id="pwBack">Cancel</button></p></form>`);
+  bindForm($("#fPw"),async fd=>{if(fd.get("n")!==fd.get("n2"))throw{msg:"The two passwords don't match."};const j=await api("changePassword",{current:"",next:fd.get("n"),remember});saveTok(j.token);toast("Password saved");start()});
+  $("#pwBack").onclick=()=>start();return}
  if(mode==="change"){const forced=S&&S.me&&S.me.mustChange;
   authShell(`<form id="fPw" novalidate><h2>${forced?"Choose your own password":"Change your password"}</h2><p class="hint">${forced?"You signed in with a temporary password. Pick a new one that only you know.":"Pick a new password with at least 8 characters."}</p>
   <label class="l" for="pc">${forced?"Temporary password":"Current password"}</label><input id="pc" name="c" type="password" autocomplete="current-password" required autofocus>
@@ -378,7 +395,7 @@ function shell(){const m=S.me,cur=location.hash.split("/")[1]||"";const un=unrea
  const curT=S.me.role==="teacher"&&!cur?"my":cur;const tabs=[m.role==="teacher"?null:["","Board"],m.rooms.length||m.role==="teacher"?["my",m.rooms.length>1?"My rooms":"My room"]:null,["tickets",isManager()?"Tickets":"My tickets"],isManager()?["reports","Reports"]:null,isAdmin()?["people","People"]:null,isManager()?["more","Activity"]:null].filter(Boolean);
  $("#tabs").innerHTML=tabs.map(([k,n])=>`<a href="#/${k}" ${curT===k?'aria-current="page"':""}>${n}${k==="tickets"&&un?'<span class="dotn" aria-label="New replies"></span>':""}</a>`).join("");
  $("#meBtn").innerHTML=`<span class="av">${esc(initials(m.name))}</span>${esc(m.name.split(" ")[0])}`;
- $("#meWho").innerHTML=`<b>${esc(m.name)}</b>${esc(m.username)} · ${ROLE[m.role]}`;
+ if(typeof pwLabel==="function")pwLabel();$("#meWho").innerHTML=`<b>${esc(m.name)}</b>${esc(m.username)} · ${ROLE[m.role]}`;
  document.title=(S.board.school?S.board.school+" · ":"")+"Room Tech Status"}
 function route(){if(!S||!S.board)return;shell();const p=location.hash.replace(/^#\/?/,"").split("/");const v=$("#view");
  const views={"":boardView,my:myView,tickets:ticketsView,t:ticketView,people:peopleView,more:activityView,reports:reportsView};
@@ -386,8 +403,8 @@ function route(){if(!S||!S.board)return;shell();const p=location.hash.replace(/^
  (S.me.role==="teacher"&&!p[0]?myView:(views[p[0]]||boardView))(v,p.slice(1));window.scrollTo&&p[0]==="t"&&window.scrollTo(0,0)}
 addEventListener("hashchange",route);
 $("#meBtn").onclick=e=>{e.stopPropagation();$("#meMenu").classList.toggle("on")};document.addEventListener("click",()=>$("#meMenu").classList.remove("on"));
-$("#mPw").onclick=()=>auth("change");$("#mSet").onclick=()=>settingsDlg();
-$("#mOut").onclick=()=>{saveTok("");S=null;location.hash="";auth("login");toast("Signed out")};
+$("#mPw").onclick=()=>auth("change");const pwLabel=()=>$("#mPw").textContent=S&&S.me&&S.me.hasPw===false?"Set a password":"Change my password";$("#mSet").onclick=()=>settingsDlg();
+$("#mOut").onclick=()=>{saveTok("");S=null;try{window.google&&google.accounts&&google.accounts.id.disableAutoSelect()}catch(e){}location.hash="";auth("login");toast("Signed out")};
 $("#repTop").onclick=()=>reportDlg();
 /* ===================== TILES ===================== */
 function tile(r,d){const t=openT(r.id,d.id);return`<button class="tile t-${d.status}" type="button" data-r="${r.id}" data-d="${d.id}" title="${esc(dName(d))}: ${DS[d.status]}">
@@ -524,14 +541,19 @@ function peopleView(v){if(!isAdmin()){v.innerHTML=`<div class="empty">Only an ad
  const us=S.users.slice().sort((a,b)=>(a.disabled-b.disabled)||a.name.localeCompare(b.name));
  v.innerHTML=`<div class="ph"><div><h1>People</h1><p>Give each person an account and their rooms. Teachers only see the rooms assigned to them. Techs and admins see every room. People choose their own password the first time they sign in.</p></div><div class="tools" style="margin:0"><button class="btn" type="button" id="bulk">${ui("users")} Add many at once</button><button class="btn dk" type="button" id="addP">${ui("plus")} Add a person</button></div></div>
  <div class="card" style="overflow-x:auto"><table class="t"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Rooms</th><th>Last signed in</th><th></th></tr></thead><tbody>
- ${us.map(u=>`<tr class="${u.disabled?"off":""}"><td><b>${esc(u.name)}</b>${u.email?`<div class="hint" style="margin:0">${esc(u.email)}</div>`:""}${u.mustChange?`<div class="hint" style="margin:0">Hasn't set a password yet</div>`:""}${u.disabled?`<div class="hint" style="margin:0">Turned off</div>`:""}</td><td>${esc(u.username)}</td><td><span class="role ${u.role}">${ROLE[u.role]}</span></td><td>${esc(u.rooms.map(id=>(room(id)||{}).name).filter(Boolean).join(", "))||'<span class="hint">None</span>'}</td><td>${u.lastLogin?ago(u.lastLogin):'<span class="hint">Never</span>'}</td><td><button class="btn sm" type="button" data-u="${esc(u.username)}">Edit</button></td></tr>`).join("")}</tbody></table></div>
+ ${us.map(u=>`<tr class="${u.disabled?"off":""}"><td><b>${esc(u.name)}</b>${u.email?`<div class="hint" style="margin:0">${esc(u.email)}</div>`:""}${u.mustChange?`<div class="hint" style="margin:0">Hasn't set a password yet</div>`:!u.hasPw?`<div class="hint" style="margin:0">Signs in with Google</div>`:""}${u.disabled?`<div class="hint" style="margin:0">Turned off</div>`:""}</td><td>${esc(u.username)}</td><td><span class="role ${u.role}">${ROLE[u.role]}</span></td><td>${esc(u.rooms.map(id=>(room(id)||{}).name).filter(Boolean).join(", "))||'<span class="hint">None</span>'}</td><td>${u.lastLogin?ago(u.lastLogin):'<span class="hint">Never</span>'}</td><td><button class="btn sm" type="button" data-u="${esc(u.username)}">Edit</button></td></tr>`).join("")}</tbody></table></div>
+ <div class="card pad" style="margin-top:18px"><h3 style="margin:0 0 6px"><svg viewBox="0 0 48 48" width="18" height="18" style="vertical-align:-3px;margin-right:6px" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.6 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.2 0-11.5-4.2-13.4-9.9l-8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Sign in with Google</h3>
+  ${S.signin&&S.signin.google?`<p class="hint" style="margin-top:0">On${S.signin.domain?` for <b>${esc(S.signin.domain)}</b> Google accounts`:""}. People sign in with Google when their account's email matches their Google email. Usernames and passwords still work too.</p>
+  <label class="chk"><input type="checkbox" id="gAuto" ${S.signin.autoCreate?"checked":""}> Let staff without an account join by signing in with Google. They start as teachers with no rooms until you assign some.</label>`
+  :`<p class="hint" style="margin:0">Off. To turn it on, add <b>GOOGLE_CLIENT_ID</b> (and optionally <b>GOOGLE_DOMAIN</b>) in Netlify. The README walks through it.</p>`}</div>
  <div class="card pad" style="margin-top:18px"><h3 style="margin:0 0 6px">Wall display links</h3><p class="hint" style="margin-top:0">A private link for a TV in the office. It shows problems in big type and needs no sign-in. Anyone with the link can see the board, so only put it on screens you control.</p>
   <div id="disp">${(S.displays||[]).map(x=>`<div class="row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)"><b style="min-width:140px">${esc(x.name)}</b><code style="flex:1;min-width:200px;font-size:.8rem;word-break:break-all;color:var(--muted)">${esc(dispUrl(x.key))}</code><button class="btn sm" type="button" data-copy="${esc(dispUrl(x.key))}">${ui("copy")} Copy</button><a class="btn sm" href="${esc(dispUrl(x.key))}" target="_blank" rel="noopener">Open</a><button class="btn sm" type="button" data-deld="${x.id}">${ui("trash")}</button></div>`).join("")||'<p class="hint">No display links yet.</p>'}</div>
   <form id="fDisp" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><label class="sr" for="dispName">Display name</label><input id="dispName" name="n" placeholder="Front office TV" style="max-width:280px"><button class="btn" type="submit">${ui("tv")} Make a display link</button></form></div>`;
  $$("[data-u]",v).forEach(b=>b.onclick=()=>personForm(S.users.find(u=>u.username===b.dataset.u)));$("#addP").onclick=()=>personForm();$("#bulk").onclick=bulkForm;
  $$("[data-copy]",v).forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.copy);toast("Link copied")}catch(e){prompt("Copy this link:",b.dataset.copy)}});
  $$("[data-deld]",v).forEach(b=>b.onclick=async()=>{if(confirm("Remove this display link? Screens using it will stop updating."))await act("deleteDisplay",{id:b.dataset.deld},"Removed")});
- bindForm($("#fDisp"),async fd=>{await act("addDisplay",{name:fd.get("n")},"Display link made")})}
+ bindForm($("#fDisp"),async fd=>{await act("addDisplay",{name:fd.get("n")},"Display link made")});
+ if($("#gAuto"))$("#gAuto").onchange=async e=>{try{await api("signinSettings",{googleAutoCreate:e.target.checked});S.signin.autoCreate=e.target.checked;toast(e.target.checked?"New staff can join with Google":"Only existing accounts can use Google")}catch(x){toast(x.msg);e.target.checked=!e.target.checked}}}
 const dispUrl=k=>location.origin+location.pathname.replace(/index\.html$/,"")+"?display="+encodeURIComponent(k);
 function personForm(u){const d=dlg(`<form class="dlg" id="fP" novalidate><h2>${u?esc(u.name):"Add a person"}</h2>
   <div class="g2"><div><label class="l" for="pn">Full name</label><input id="pn" name="name" maxlength="60" required value="${esc(u?u.name:"")}" placeholder="Jane Allen"></div>
@@ -617,7 +639,7 @@ if(!dk&&qs.get("r")){try{sessionStorage.setItem("rsb.deep",JSON.stringify({r:qs.
 (async()=>{if(dk)return wall(dk);
  if(location.protocol==="file:"){authShell(`<div class="banner bad">This board needs its Netlify server function, so it can't run from a file on your computer. Deploy it to Netlify and open the site address.</div>`);return}
  if(tok){try{const j=await api("me");if(j.me.mustChange){S={me:j.me};return auth("change")}return start()}catch(e){if(e.mustChange)return;if(e.nofn||e.net||e.setup)return authShell(`<div class="banner bad">${esc(e.msg)}</div>`)}}
- try{const st=await api("status");auth(st.needsSetup?"setup":"login")}catch(e){authShell(`<div class="banner bad">${esc(e.msg)}${e.setup?"<br><br>In Netlify, go to Site configuration > Environment variables, add ADMIN_PIN, then redeploy.":""}</div>`)}})();
+ try{const st=await api("status");GS=st;auth(st.needsSetup?"setup":"login")}catch(e){authShell(`<div class="banner bad">${esc(e.msg)}${e.setup?"<br><br>In Netlify, go to Site configuration > Environment variables, add ADMIN_PIN, then redeploy.":""}</div>`)}})();
 setInterval(async()=>{if(S&&S.board&&!document.hidden&&!$("#dlg").open&&!document.activeElement.matches("textarea,input")){if(await load(true))route()}},20000);
 document.addEventListener("visibilitychange",async()=>{if(!document.hidden&&S&&S.board&&!$("#dlg").open){if(await load(true))route()}});
 if("serviceWorker" in navigator&&location.protocol==="https:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
