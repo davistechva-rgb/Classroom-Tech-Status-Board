@@ -124,8 +124,8 @@ function recompute(b) {
 function boardFor(b, u) {
   const cutoff = Date.now() - 45 * DAY;
   let tickets = b.tickets.filter(t => t.state !== "fixed" || (t.closed || 0) > cutoff), rooms = b.rooms;
-  // Everyone except admins only sees the rooms assigned to them (and tickets they wrote). Admins see everything.
-  if (u && u.role !== "admin") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
+  // Teachers only see the rooms assigned to them (and tickets they wrote). Admins and techs see everything.
+  if (u && u.role === "teacher") { const mine = new Set(u.rooms || []); rooms = rooms.filter(r => mine.has(r.id)); tickets = tickets.filter(t => mine.has(t.room) || t.by === u.username); }
   return { ...b, rooms, tickets: tickets.map(t => ({ ...t, unread: u ? (t.comments || []).some(c => c.ts > ((t.seen || {})[u.username] || 0) && c.by !== u.username) : false })) };
 }
 async function log(by, text) { await mutate("log", () => ({ list: [] }), l => { l.list.unshift({ ts: Date.now(), by, text: clean(text, 300) }); l.list = l.list.slice(0, L.log); }); }
@@ -211,7 +211,7 @@ async function handle(req) {
     const b = upgrade(await read("board", blankBoard));
     const users = await read("users", () => ({ list: [] }));
     let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
-    if (me.role !== "admin") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role === "admin" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
+    if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
     const out = { me: publicUser(me), board: boardFor(b, me), people, types: TYPES };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     if (me.role === "admin") { out.users = users.list.map(publicUser); out.displays = ((await read("meta", () => ({}))).displays || []).map(d => ({ id: d.id, name: d.name, key: d.key, created: d.created })); }
@@ -273,7 +273,7 @@ async function handle(req) {
     const dev = (r, d) => (room(r)?.devices || []).find(x => x.id === d);
     const tk = t => b.tickets.find(x => x.id === t);
     const need = ok => { if (!ok) throw new HttpError(403, "Your account can't do that."); };
-    const mine = rid => me.role === "admin" || (me.rooms || []).includes(rid);
+    const mine = rid => me.role !== "teacher" || (me.rooms || []).includes(rid);
     const needRoom = rid => { if (!mine(rid)) throw new HttpError(403, "That room isn't assigned to your account."); };
     const devFields = (d, src) => { for (const k of ["name", "model", "serial", "asset", "location"]) if (src[k] != null) d[k] = line(src[k], L.field); if (src.notes != null) d.notes = clean(src.notes, L.text); if (src.type != null && TYPES.includes(src.type)) d.type = src.type; };
     switch (a) {
@@ -311,14 +311,14 @@ async function handle(req) {
       case "assign": { need(manage); const t = tk(body.ticket); if (!t) break; needRoom(t.room); t.assignee = normUser(body.assignee) || null; t.updated = Date.now(); note = "Changed who's handling a ticket"; break; }
       case "school": need(me.role === "admin"); b.school = line(body.school, L.name); note = "Changed the school name"; break;
       case "addRoom": {
-        need(me.role === "admin"); if (b.rooms.length >= L.rooms) throw new HttpError(400, "Room limit reached.");
+        need(manage); if (b.rooms.length >= L.rooms) throw new HttpError(400, "Room limit reached.");
         const name = line(body.name, L.name); if (!name) throw new HttpError(400, "Name the room.");
         const types = Array.isArray(body.devices) ? body.devices.slice(0, L.devices) : [];
         const r = { id: id(), name, area: line(body.area, L.name), devices: types.map(t => ({ id: id(), type: TYPES.includes(t) ? t : "Other", name: "", status: "ok" })) };
         b.rooms.push(r); result.room = r.id; note = `Added the room ${name}`; break;
       }
       case "editRoom": { need(manage); needRoom(body.room); const r = room(body.room); if (!r) break; if (body.name != null) r.name = line(body.name, L.name) || r.name; if (body.area != null) r.area = line(body.area, L.name); note = `Edited the room ${r.name}`; break; }
-      case "delRoom": { need(me.role === "admin"); const r = room(body.room); b.rooms = b.rooms.filter(x => x.id !== body.room); b.tickets = b.tickets.filter(x => x.room !== body.room); note = `Deleted the room ${r ? r.name : ""}`; break; }
+      case "delRoom": { need(manage); const r = room(body.room); b.rooms = b.rooms.filter(x => x.id !== body.room); b.tickets = b.tickets.filter(x => x.room !== body.room); note = `Deleted the room ${r ? r.name : ""}`; break; }
       case "addDevice": {
         need(manage); needRoom(body.room); const r = room(body.room); if (!r) throw new HttpError(400, "That room no longer exists.");
         if (r.devices.length >= L.devices) throw new HttpError(400, "That room has the most devices allowed.");

@@ -6,7 +6,7 @@ Made by [Davis Tech Support](https://davis-tech-support.com) in Farmville, Virgi
 
 ## Features
 - **Accounts:** the admin creates accounts (one at a time or many at once) and prints login slips with a temporary password. Each person chooses their own password the first time they sign in and can change it any time. Forgotten passwords are reset by an admin.
-- **Three roles:** *Teacher* reports problems in their assigned rooms. *Tech* fixes tickets and edits devices in their assigned rooms. *Admin* sees every room, adds and deletes rooms, and manages accounts. Teachers and techs only see the rooms assigned to them on the People page.
+- **Three roles:** *Teacher* only sees the rooms assigned to them on the People page, and reports problems there. *Tech* sees every room and manages rooms, devices, and tickets. *Admin* sees everything and also manages accounts.
 - **My room:** each teacher is assigned one or more rooms and lands on them when they sign in.
 - **Device tiles:** icons for 15 kinds of devices, including Chromebook and iPad carts. Colors show the status: green working, amber has a problem, red not working, blue being fixed. Each device can store a model, serial number, asset tag, location in the room, and private notes, and keeps its ticket history.
 - **Tickets with replies:** every report is a conversation between the teacher and the tech. Teachers see a dot when there's a new reply. Tickets can be assigned and marked Open, Working on it, Waiting on parts, or Fixed.
