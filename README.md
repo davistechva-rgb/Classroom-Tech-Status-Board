@@ -17,6 +17,7 @@ Made by [Davis Tech Support](https://davis-tech-support.com) in Farmville, Virgi
 - **Notices:** post planned outages ("Wi-Fi down in Upper School until 3:30") so everyone sees them before reporting.
 - **Warranty and lamp tracking:** add purchase dates, warranty end dates, and projector lamp hours. A morning email gives a heads-up 30 days before a warranty ends and when a lamp reaches 90%, and on Mondays it lists tickets open more than a week.
 - **Reports:** problems per month, average time to fix, the devices and rooms with the most problems, what's coming up, plus inventory and ticket spreadsheets for Excel or Google Sheets.
+- **UniFi monitoring** (optional): access points and switches turn red and open a ticket on their own when UniFi says they're offline, then close it when they're back.
 - **Quick fixes:** when a teacher reports a problem, the form first shows a few steps to try for that kind of device ("Press Source on the remote"). If one works, they tap **That fixed it** and no ticket is made. Edit the steps from **Board → Quick fixes**. Reports counts how many problems teachers fixed themselves.
 - **Loaners:** list the Chromebooks, chargers, hotspots, and other things you lend out, check them out to staff or students with a due date, and check them back in (good, damaged, or missing parts). Overdue items stand out, show up in the morning email, and teachers see what they've borrowed on their own page.
 - **Walkthroughs:** a phone-friendly room-by-room checklist for summer or monthly checks. Tap ✓ or ✗ on each device, and every ✗ becomes a ticket automatically. Download the results as a spreadsheet.
@@ -61,6 +62,16 @@ Teachers can tap **Sign in with Google** instead of typing a password. The board
 4. In Netlify, add `GOOGLE_CLIENT_ID` (the Client ID) and `GOOGLE_DOMAIN` (your Google Workspace domain, for example `fuquaschool.org`). Leave **Contains secret values** unchecked for both, then redeploy.
 
 The sign-in page now shows a Google button above the username form. On the People page, the **Sign in with Google** card can let staff who don't have an account yet join on their own. They start as teachers with no rooms until you assign some. Usernames and passwords keep working either way.
+
+### Connect UniFi (optional)
+The board can watch your UniFi access points and switches through Ubiquiti's cloud (the UniFi Site Manager API, which can only read status, never change anything). When a linked device has been offline for two checks in a row (about 10 minutes), its tile turns red, a ticket opens, and techs and admins get the usual "Not working" email. When it comes back online, the ticket closes itself.
+
+1. Sign in at **unifi.ui.com** with an account that can see your school's site. Your console (UDM, Cloud Gateway, or Cloud Key) has to show up there.
+2. Go to **Settings > API > Create API Key** and copy the key right away. It's only shown once.
+3. In Netlify, add `UNIFI_API_KEY` with that key (it's fine to mark this one secret), then redeploy.
+4. On the board, press **📡 UniFi**. Pick which board device each access point or switch belongs to, or choose **+ Add it to (room)**. Names that include a room name or number are suggested for you.
+
+The check runs every 5 minutes from `netlify/functions/unifi.mjs`. You can also link one device at a time from **Edit details** on that device.
 
 ### Upgrading from version 1
 Your rooms, devices, and open reports carry over. `STAFF_CODE` is no longer used, so you can delete it. Keep `ADMIN_PIN`.

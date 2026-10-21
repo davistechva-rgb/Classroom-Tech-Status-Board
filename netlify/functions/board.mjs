@@ -8,6 +8,8 @@
 //     SMTP_USER + SMTP_PASS  for example a Gmail address and a Google app password (SMTP_HOST / SMTP_PORT for other providers)
 //     RESEND_API_KEY + MAIL_FROM  a Resend.com key and a verified sender address
 //   MAIL_NAME (optional) the sender name on alerts. Default: Room Tech Status
+//   UniFi (optional): UNIFI_API_KEY from unifi.ui.com > Settings > API. Lets the board watch access points and
+//     switches through the UniFi Site Manager API (read-only) and open/close tickets when they go offline/online.
 //   Sign in with Google (optional): GOOGLE_CLIENT_ID (a Web client ID from Google Cloud), and GOOGLE_DOMAIN to only allow one
 //     Google Workspace domain (for example fuquaschool.org).
 //
@@ -17,7 +19,7 @@ import { scryptSync, randomBytes, createHmac, timingSafeEqual, createPublicKey, 
 
 export const config = { path: "/api/board" };
 
-const TYPES = ["Projector", "TV or display", "Interactive board", "Document camera", "Computer", "Laptop", "Chromebook cart", "iPad cart", "Printer", "Speakers or sound", "Microphone", "Phone", "Wi-Fi access point", "Camera", "Other"];
+const TYPES = ["Projector", "TV or display", "Interactive board", "Document camera", "Computer", "Laptop", "Chromebook cart", "iPad cart", "Printer", "Speakers or sound", "Microphone", "Phone", "Wi-Fi access point", "Network switch", "Camera", "Other"];
 const DEV_STATUS = ["ok", "issue", "down", "repair"];
 const TICKET_STATES = ["open", "progress", "waiting", "fixed"];
 const ROLES = ["admin", "tech", "teacher"];
@@ -38,6 +40,7 @@ const DEFAULT_FIXES = {
   "Microphone": ["Check the mic is on and its battery is charged.", "Check it isn't muted on the receiver or computer."],
   "Phone": ["Check the cord from the phone to the wall is pushed in.", "Unplug the phone's network cable for 10 seconds, then plug it back in."],
   "Wi-Fi access point": ["Turn your device's Wi-Fi off and on.", "Try moving closer to the hallway or another room.", "Check whether others nearby have the same problem."],
+  "Network switch": ["Check the switch has power lights.", "Check the network cable from the wall to the device is pushed in."],
   "Camera": ["Check the camera is plugged in and its light is on.", "Restart the app or computer that uses it."],
   "Other": [] };
 const PHOTO_MAX = 2500000;
@@ -311,6 +314,58 @@ function boardFor(b, u, sec) {
 }
 async function log(by, text) { await mutate("log", () => ({ list: [] }), l => { l.list.unshift({ ts: Date.now(), by, text: clean(text, 300) }); l.list = l.list.slice(0, L.log); }); }
 
+/* ---------- UniFi Site Manager: watch APs and switches ---------- */
+const UNIFI_KEY = () => (process.env.UNIFI_API_KEY || "").trim();
+const normMac = m => String(m || "").toLowerCase().replace(/[^0-9a-f]/g, "");
+async function unifiFetchDevices() {
+  const base = (process.env.UNIFI_API_URL || "https://api.ui.com").replace(/\/$/, "");
+  const out = []; let next = "", pages = 0;
+  const walk = (o, host) => { // the API groups devices under each console ("host"); collect anything that looks like a device
+    if (Array.isArray(o)) return o.forEach(x => walk(x, host));
+    if (!o || typeof o !== "object") return;
+    if (Array.isArray(o.devices)) return o.devices.forEach(d => walk(d, o.hostName || o.hostname || host));
+    if (o.mac && (o.status || o.state)) out.push({ mac: normMac(o.mac), name: String(o.name || o.shortname || o.model || o.mac), model: String(o.shortname || o.model || ""), product: String(o.productLine || o.type || ""),
+      status: String(o.status || o.state).toLowerCase() === "online" ? "online" : "offline", ip: String(o.ip || ""), host: String(host || o.hostName || "") });
+  };
+  do {
+    const r = await withTimeout(fetch(`${base}/v1/devices${next ? `?nextToken=${encodeURIComponent(next)}` : ""}`, { headers: { "X-API-KEY": UNIFI_KEY(), accept: "application/json" } }), 15000);
+    if (r.status === 401 || r.status === 403) throw new HttpError(502, "UniFi didn't accept the API key. Check UNIFI_API_KEY in Netlify.");
+    if (r.status === 429) throw new HttpError(503, "UniFi says too many requests. Try again in a minute.");
+    if (!r.ok) throw new HttpError(502, `UniFi answered ${r.status}. Try again later.`);
+    const j = await r.json(); walk(j.data ?? j); next = j.nextToken || ""; pages++;
+  } while (next && pages < 20);
+  const seen = new Set(); return out.filter(d => d.mac && !seen.has(d.mac) && seen.add(d.mac));
+}
+export async function runUnifi() {
+  if (!UNIFI_KEY()) return { skipped: true };
+  const list = await unifiFetchDevices(), byMac = new Map(list.map(d => [d.mac, d]));
+  const prev = await read("unifi", () => ({ miss: {} }));
+  const miss = {}; for (const d of list) miss[d.mac] = d.status === "offline" ? (prev.miss?.[d.mac] || 0) + 1 : 0;
+  await mutate("unifi", () => ({}), u => { u.ts = Date.now(); u.devices = list; u.miss = miss; });
+  const opened = [], closed = [];
+  const { v: b } = await mutate("board", blankBoard, b0 => {
+    const b = upgrade(b0); opened.length = 0; closed.length = 0;
+    for (const r of b.rooms) for (const d of r.devices) {
+      if (!d.unifi) continue; const u = byMac.get(d.unifi); if (!u) { d.unifiStatus = "missing"; continue; }
+      d.unifiStatus = u.status; d.unifiSeen = Date.now(); d.unifiModel = u.model; d.unifiIp = u.ip;
+      const open = b.tickets.find(t => t.device === d.id && t.auto === "unifi" && t.state !== "fixed");
+      if (u.status === "offline" && miss[u.mac] >= 2 && !open) {
+        const t = { id: id(), room: r.id, device: d.id, text: `UniFi reports ${u.name} is offline${u.model ? ` (${u.model}${u.ip ? ", " + u.ip : ""})` : ""}. Check its power and network cable.`, by: "unifi", byName: "UniFi", severity: "down", state: "open", opened: Date.now(), updated: Date.now(), comments: [], photos: [], seen: {}, auto: "unifi" };
+        d.manual = false; b.tickets.unshift(t); opened.push(t.id);
+      }
+      if (u.status === "online" && open) {
+        open.state = "fixed"; open.closed = Date.now(); open.updated = Date.now();
+        open.comments = (open.comments || []).concat({ by: "", byName: "UniFi", role: "system", text: "Back online in UniFi, so this closed itself.", ts: Date.now() }); closed.push(open.id);
+      }
+    }
+    recompute(b); b.updated = Date.now();
+  });
+  const bot = { username: "unifi", name: "UniFi", role: "tech" };
+  for (const tid of opened) { try { await notify("report", b.tickets.find(t => t.id === tid), b, bot); } catch (e) { console.error(e); } }
+  if (opened.length || closed.length) await log("unifi", `UniFi: ${opened.length} offline ticket${opened.length === 1 ? "" : "s"} opened, ${closed.length} closed`);
+  return { devices: list.length, offline: list.filter(d => d.status === "offline").length, opened: opened.length, closed: closed.length };
+}
+
 /* ---------- handler ---------- */
 export default async (req) => {
   try { return await handle(req); }
@@ -424,7 +479,7 @@ async function handle(req) {
     const users = await read("users", () => ({ list: [] }));
     let people = users.list.filter(u => !u.disabled).map(u => ({ username: u.username, name: u.name, role: u.role, rooms: u.rooms || [] }));
     if (me.role === "teacher") { const mine = new Set(me.rooms || []); people = people.filter(p => p.role !== "teacher" || p.username === me.username || p.rooms.some(r => mine.has(r))).map(p => ({ ...p, rooms: p.rooms.filter(r => mine.has(r)) })); }
-    const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE(), google: !!GOOGLE_ID() };
+    const out = { me: publicUser(me), board: boardFor(b, me, await secret()), people, types: TYPES, mail: mailReady(), site: SITE(), google: !!GOOGLE_ID(), unifi: !!UNIFI_KEY() };
     if (can(me, "manage")) out.log = (await read("log", () => ({ list: [] }))).list.slice(0, 60);
     out.fixes = { ...DEFAULT_FIXES, ...(b.fixes || {}) }; out.loanTypes = LOAN_TYPES;
     const LN = await read("loans", () => ({ items: [], loans: [] }));
@@ -502,6 +557,26 @@ async function handle(req) {
     await log(me.username, body.googleAutoCreate ? "Let new staff join with Google" : "Turned off joining with Google");
     return json({ ok: true });
   }
+  /* ----- UniFi ----- */
+  if (a === "unifiList" || a === "unifiCheck" || a === "unifiLink") {
+    if (!can(me, "manage")) throw new HttpError(403, "Only techs and admins can manage UniFi links.");
+    if (!UNIFI_KEY()) throw new HttpError(400, "UniFi isn't connected. Add UNIFI_API_KEY in Netlify, then redeploy.");
+    if (a === "unifiCheck") { const r = await runUnifi(); const u = await read("unifi", () => ({})); return json({ ok: true, result: r, devices: u.devices || [], ts: u.ts, board: boardFor(upgrade(await read("board", blankBoard)), me, await secret()) }); }
+    if (a === "unifiList") { let u = await read("unifi", () => ({})); if (!u.ts || Date.now() - u.ts > 120000 || body.fresh) { await runUnifi(); u = await read("unifi", () => ({})); } return json({ devices: u.devices || [], ts: u.ts }); }
+    const links = Array.isArray(body.links) ? body.links.slice(0, 500) : [];
+    const u = await read("unifi", () => ({})); const byMac = new Map((u.devices || []).map(d => [d.mac, d]));
+    const { v: b } = await mutate("board", blankBoard, b0 => { const b = upgrade(b0);
+      for (const l of links) { const mac = normMac(l.mac); const ud = byMac.get(mac);
+        // unlink this MAC from anything else first
+        if (l.device || l.room || l.unlink) for (const r of b.rooms) for (const d of r.devices) if (d.unifi === mac && d.id !== l.device) { delete d.unifi; delete d.unifiStatus; }
+        if (l.device) { for (const r of b.rooms) { const d = r.devices.find(x => x.id === l.device); if (d) { d.unifi = mac; if (ud) { d.unifiStatus = ud.status; d.unifiModel = ud.model; d.unifiIp = ud.ip; d.unifiSeen = u.ts; } } } }
+        else if (l.room && ud) { const r = b.rooms.find(x => x.id === l.room); if (r && r.devices.length < L.devices) r.devices.push({ id: id(), type: /switch|usw/i.test(ud.product + " " + ud.model + " " + ud.name) ? "Network switch" : "Wi-Fi access point", name: line(ud.name, L.field), model: line(ud.model, L.field), status: "ok", unifi: mac, unifiStatus: ud.status, unifiModel: ud.model, unifiIp: ud.ip, unifiSeen: u.ts }); }
+      }
+      recompute(b); b.updated = Date.now(); });
+    await log(me.username, `Linked ${links.length} UniFi device${links.length === 1 ? "" : "s"}`);
+    return json({ ok: true, board: boardFor(b, me, await secret()) });
+  }
+
   /* ----- quick fixes ----- */
   if (a === "selfFixed") {
     const b = await read("board", blankBoard); const r = b.rooms.find(x => x.id === body.room), d = r && r.devices.find(x => x.id === body.device);
@@ -615,6 +690,7 @@ async function handle(req) {
       for (const k of ["name", "model", "serial", "asset", "location"]) if (src[k] != null) d[k] = line(src[k], L.field);
       if (src.notes != null) d.notes = clean(src.notes, L.text); if (src.type != null && TYPES.includes(src.type)) d.type = src.type;
       for (const k of ["purchased", "warranty"]) if (src[k] != null) { const v = String(src[k]).trim(); d[k] = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ""; if (k === "warranty" && d.warnW && d.warnW !== d.warranty) delete d.warnW; }
+      if (src.unifi != null) { const m = normMac(src.unifi); if (m) d.unifi = m; else { delete d.unifi; delete d.unifiStatus; } }
       for (const k of ["lampHours", "lampLife"]) if (src[k] != null) { const v = Math.round(+src[k]); d[k] = src[k] === "" || !(v >= 0) ? 0 : Math.min(v, 200000); }
       if (!(d.lampLife > 0 && d.lampHours >= d.lampLife * 0.9)) delete d.warnL;
     };
